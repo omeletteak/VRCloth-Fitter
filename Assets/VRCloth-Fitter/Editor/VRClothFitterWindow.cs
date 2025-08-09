@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using VRClothFitter; // Namespaceを追加
 
 public class VRClothFitterWindow : EditorWindow
 {
@@ -56,10 +57,8 @@ public class VRClothFitterWindow : EditorWindow
                 {
                     EditorGUILayout.BeginHorizontal();
                     {
-                        // 衣装のボーン名を表示
                         EditorGUILayout.LabelField(clothBoneNames[i]);
                         GUILayout.Label("->", GUILayout.Width(20));
-                        // アバターのボーンを選択するドロップダウン
                         mappedBoneIndices[i] = EditorGUILayout.Popup(mappedBoneIndices[i], avatarBoneNamesArray);
                     }
                     EditorGUILayout.EndHorizontal();
@@ -74,11 +73,19 @@ public class VRClothFitterWindow : EditorWindow
 
         EditorGUILayout.Space();
 
-        // 実行ボタン
-        if (GUILayout.Button("Fit Cloth"))
+        // 実行ボタンエリア
+        EditorGUILayout.BeginHorizontal();
         {
-            FitCloth();
+            if (GUILayout.Button("Fit Bones"))
+            {
+                FitBones();
+            }
+            if (GUILayout.Button("Calculate & Save Scale"))
+            {
+                CalculateAndSaveScale();
+            }
         }
+        EditorGUILayout.EndHorizontal();
     }
 
     private void UpdateBoneData()
@@ -93,7 +100,7 @@ public class VRClothFitterWindow : EditorWindow
                 avatarBoneNames = renderer.bones.Select(b => b.name).ToList();
             }
         }
-        avatarBoneNames.Insert(0, NO_BONE_SELECTED); // 未選択オプションを追加
+        avatarBoneNames.Insert(0, NO_BONE_SELECTED);
         avatarBoneNamesArray = avatarBoneNames.ToArray();
 
         // 衣装のボーンリストを取得
@@ -112,46 +119,54 @@ public class VRClothFitterWindow : EditorWindow
         for (int i = 0; i < clothBoneNames.Count; i++)
         {
             int foundIndex = avatarBoneNames.FindIndex(bName => bName == clothBoneNames[i]);
-            mappedBoneIndices[i] = (foundIndex != -1) ? foundIndex : 0; // 見つからなければ[None]
+            mappedBoneIndices[i] = (foundIndex != -1) ? foundIndex : 0;
         }
         
         Repaint();
     }
 
-    private void FitCloth()
+    private bool GetRenderers(out SkinnedMeshRenderer avatarRenderer, out SkinnedMeshRenderer clothRenderer)
     {
+        avatarRenderer = null;
+        clothRenderer = null;
+
         if (avatarObject == null || clothObject == null)
         {
             EditorUtility.DisplayDialog("Error", "AvatarとClothの両方を設定してください。", "OK");
-            return;
+            return false;
         }
 
-        var avatarRenderer = avatarObject.GetComponentInChildren<SkinnedMeshRenderer>();
-        var clothRenderer = clothObject.GetComponentInChildren<SkinnedMeshRenderer>();
-
+        avatarRenderer = avatarObject.GetComponentInChildren<SkinnedMeshRenderer>();
         if (avatarRenderer == null)
         {
             EditorUtility.DisplayDialog("Error", "AvatarにSkinnedMeshRendererが見つかりません。", "OK");
-            return;
+            return false;
         }
 
+        clothRenderer = clothObject.GetComponentInChildren<SkinnedMeshRenderer>();
         if (clothRenderer == null)
         {
             EditorUtility.DisplayDialog("Error", "ClothにSkinnedMeshRendererが見つかりません。", "OK");
-            return;
+            return false;
         }
 
-        // アバターのボーンを名前をキーにした辞書に変換
+        return true;
+    }
+
+    private void FitBones()
+    {
+        if (!GetRenderers(out var avatarRenderer, out var clothRenderer)) return;
+
+        Undo.RecordObject(clothRenderer, "Fit Cloth Bones");
+
         var avatarBones = avatarRenderer.bones.ToDictionary(b => b.name, b => b);
-        
-        // UIのマッピング情報に基づいて新しいボーン配列を作成
         var newClothBones = new Transform[clothRenderer.bones.Length];
-        bool allBonesFound = true;
+        bool allBonesMapped = true;
 
         for (int i = 0; i < clothRenderer.bones.Length; i++)
         {
             int selectedIndex = mappedBoneIndices[i];
-            if (selectedIndex > 0) // 0は[None]なので無視
+            if (selectedIndex > 0)
             {
                 string selectedBoneName = avatarBoneNamesArray[selectedIndex];
                 if (avatarBones.TryGetValue(selectedBoneName, out Transform avatarBone))
@@ -161,16 +176,13 @@ public class VRClothFitterWindow : EditorWindow
             }
             else
             {
-                Debug.LogWarning($"Clothのボーン '{clothBoneNames[i]}' に対応するAvatarのボーンが設定されていません。");
-                newClothBones[i] = clothRenderer.bones[i]; // 元のボーンを維持
-                allBonesFound = false;
+                newClothBones[i] = clothRenderer.bones[i];
+                allBonesMapped = false;
             }
         }
 
-        // 衣装のSkinnedMeshRendererに新しいボーン配列を設定
         clothRenderer.bones = newClothBones;
 
-        // ルートボーンもアバターのものに合わせる
         var avatarRootBone = avatarRenderer.rootBone;
         if (avatarBones.ContainsKey(clothRenderer.rootBone.name))
         {
@@ -178,13 +190,61 @@ public class VRClothFitterWindow : EditorWindow
         }
         clothRenderer.rootBone = avatarRootBone;
 
-        if (allBonesFound)
+        if (allBonesMapped)
         {
             EditorUtility.DisplayDialog("Success", "衣装のボーンをアバターに合わせました。", "OK");
         }
         else
         {
-            EditorUtility.DisplayDialog("Warning", "いくつかのボーンが未設定です。処理は不完全かもしれません。詳細はConsoleを確認してください。", "OK");
+            EditorUtility.DisplayDialog("Warning", "いくつかのボーンが未設定です。詳細はConsoleを確認してください。", "OK");
         }
+    }
+
+    private void CalculateAndSaveScale()
+    {
+        if (!GetRenderers(out var avatarRenderer, out var clothRenderer)) return;
+
+        var scalingData = clothObject.GetComponent<VRClothFitterScalingData>();
+        if (scalingData == null)
+        {
+            scalingData = Undo.AddComponent<VRClothFitterScalingData>(clothObject);
+        }
+        Undo.RecordObject(scalingData, "Calculate and Save Bone Scale");
+
+        scalingData.boneScales.Clear();
+
+        var avatarBones = avatarRenderer.bones.ToDictionary(b => b.name, b => b);
+        var clothBonesOriginal = clothRenderer.bones.ToDictionary(b => b.name, b => b);
+
+        for (int i = 0; i < clothBoneNames.Count; i++)
+        {
+            string clothBoneName = clothBoneNames[i];
+            int selectedIndex = mappedBoneIndices[i];
+
+            if (selectedIndex == 0 || !clothBonesOriginal.TryGetValue(clothBoneName, out var clothBone) || clothBone.childCount == 0) continue;
+
+            string selectedBoneName = avatarBoneNamesArray[selectedIndex];
+            if (!avatarBones.TryGetValue(selectedBoneName, out Transform avatarBone) || avatarBone.childCount == 0)
+            {
+                continue;
+            }
+
+            float clothBoneLength = Vector3.Distance(clothBone.position, clothBone.GetChild(0).position);
+            float avatarBoneLength = Vector3.Distance(avatarBone.position, avatarBone.GetChild(0).position);
+
+            if (clothBoneLength > 0.0001f && avatarBoneLength > 0.0001f)
+            {
+                float scaleRatio = avatarBoneLength / clothBoneLength;
+                
+                var info = new BoneScaleInfo
+                {
+                    boneName = clothBoneName,
+                    scale = Vector3.one * scaleRatio
+                };
+                scalingData.boneScales.Add(info);
+            }
+        }
+        
+        EditorUtility.DisplayDialog("Success", $"{scalingData.boneScales.Count}個のボーンスケール情報を計算し、{clothObject.name}のVRClothFitterScalingDataコンポーネントに保存しました。", "OK");
     }
 }
