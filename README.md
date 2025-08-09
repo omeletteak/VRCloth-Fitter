@@ -1,66 +1,53 @@
 # VRCloth-Fitter
 
-高度な衣装改変ツールのオープンソース代替品が必要であるという考えに基づき開発された、VRChatアバターに衣装を簡単にフィットさせるためのツールです。
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## ロードマップ
+An open-source Unity editor tool designed to easily fit clothing to your VRChat avatars. It leverages the **[Non-Destructive Modular Framework (NDMF)](https://github.com/bdunderscore/ndmf)** used by Modular Avatar to apply all changes safely at build time.
 
-このツールの目標は、アバターの衣装カスタマイズのための堅牢でコミュニティ主導の機能を提供することです。開発は以下のフェーズで計画されています。
+[For Japanese instructions, please see README(jp).md](./README(jp).md).
 
-### フェーズ1：基本的なスケールフィッティング
+## Features
 
-このフェーズでは、アバターのプロポーションに合わせて衣装のボーンスケールを調整することに焦点を当てます。
+- **Bone Mapping**: Automatically maps clothing bones to your avatar's bones and allows for manual adjustments.
+- **NDMF-Based Scaling**: Calculates bone scaling (both length and thickness) and saves it to a component. The scaling is applied by an NDMF pass during the avatar build process, leaving your original assets untouched.
+- **NDMF-Based Mesh Deformation**: Fit clothing to the avatar's body shape by placing anchor points. An NDMF pass generates a new, deformed mesh at build time, ensuring a completely non-destructive workflow.
+- **Blendshape Sync Helper**: Automatically sets up Modular Avatar's `ModularAvatarBlendshapeSync` component by mapping corresponding blendshape names.
+- **Material Converter**: A utility to convert clothing materials to your desired shader (e.g., lilToon) while attempting to preserve textures.
+- **Preset System**: Export and import your fitting data (both scaling and deformation) as JSON files to share with the community.
 
-- [x] **ボーンマッピングUI**:
-    - [x] アバターと衣装のボーンを名前の一致に基づいて自動的に検出し、対応するペアをリスト化する。
-    - [x] ユーザーが手動でボーンの対応付けを編集・確定できるUIを提供する。
-- [x] **スケール計算**:
-    - [x] ボーンの「長さ」（子ボーンまでの距離）を計算する。
-    - [x] 周辺のメッシュ頂点を分析し、ボーン周りの「太さ」や「ボリューム」を推定する。
-- [x] **スケーリングの適用（非破壊ワークフロー）**:
-    - [x] 計算したスケール比率を保存するための専用コンポーネント（`VRClothFitterScalingData`）を作成する。
-    - [x] エディタウィンドウは、衣装のボーンを直接変更するのではなく、このコンポーネントにスケール情報をデータとして書き込む。
-    - [x] Modular Avatarのビルドプロセス（NDMF）にフックし、アバタービルド時にのみ、保存されたデータに基づいて一時オブジェクトのボーンスケールを適用する処理を実装する。
-- [x] **機能改善**:
-    - [x] スケール計算にボーンの「太さ」の考慮を追加し、より立体的なフィットを実現する。
-    - [x] 変更がリアルタイムで確認できるプレビュー機能を追加する。
-    - [x] ボーンマッピングのUXを向上させる（例：Humanoidボーンのハイライト）。
+## Installation
 
-### フェーズ2：高度なメッシュ変形（プロポーション改変）
+This package is distributed via the VRChat Creator Companion (VCC).
 
-これが中核機能であり、アバターの体型に合わせて衣装のメッシュを直接変形させることを目指します。
+1.  Open the VCC and go to **Settings** > **Community Packages**.
+2.  Click **Add** and paste the following URL:
+    ```
+    https://raw.githubusercontent.com/omeletteak/vpm-listing/main/index.json
+    ```
+3.  Click **Confirm**. `VRCloth-Fitter` will now be available in the package list to add to your projects.
 
-- [x] **変形データ用コンポーネント**:
-    - [x] 変形に必要な情報をすべて保存するための新しいコンポーネント `VRClothFitterDeformationData` を作成し、非破壊的なワークフローを保証する。このコンポーネントは、コントロールポイントのペアのリストを保持する。
-- [x] **コントロールポイント（アンカー）システム**:
-    - [x] **ステップ1: カスタムエディタの作成**: `VRClothFitterDeformationData`コンポーネントのデフォルトインスペクタを置き換えるための、カスタムエディタスクリプトの雛形を作成する。
-    - [x] **ステップ2: アンカー編集モード**: インスペクタ上に「アンカー編集モードを開始」ボタンを実装する。このモード中は、シーンビューでの通常の操作を無効化する。
-    - [x] **ステップ3: メッシュへのレイキャスト**: シーンビュー上でマウスカーソルがアバターまたは衣装のメッシュ上にあるとき、その表面上の点を検出（レイキャスト）できるようにする。
-    - [x] **ステップ4: アンカーの配置と可視化**: メッシュ上でクリックされた位置にアンカー（ギズモ）を配置し、シーンビューに表示する。アバター用と衣装用で色を分ける。
-    - [x] **ステップ5: アンカーペアの作成とデータ保存**: 配置されたアバターアンカーと衣装アンカーをペアとして`VRClothFitterDeformationData`に保存するロジックを実装する。対応するペアは線で結んで可視化する。
-- [x] **メッシュ変形アルゴリズム**:
-    - [x] **差分ベクトルの計算**: 各アンカーペアについて、アバターと衣装のアンカー位置の差分ベクトル（移動量）を計算する。
-    - [x] **加重平均による頂点移動**: 衣装メッシュの各頂点について、すべてのアンカーからの距離に応じた重み付けを行い、差分ベクトルを合成して新しい頂点位置を決定する。
-- [x] **NDMF Passによる非破壊的な適用**:
-    - [x] アバターのビルドプロセス中に実行される新しいNDMF Passを作成する。
-    - [x] このPassは`VRClothFitterDeformationData`を検索し、そのデータに基づいて元の衣装メッシュを複製・変形させた**新しいメッシュアセットを生成**する。
-    - [x] ビルド中の一時オブジェクトが持つ`SkinnedMeshRenderer`のメッシュを、この新しい変形済みメッシュに差し替える。
-    - [x] 最終的にビルドされたアバターからは`VRClothFitterDeformationData`コンポーネントを削除する。
+## How to Use
 
-### フェーズ3：機能拡張
+1.  **Bone Fitting**:
+    - Open the tool from **Tools > VRCloth Fitter**.
+    - Assign your Avatar and Cloth GameObjects.
+    - In the "Bone Mapping" section, verify the automatic mapping and correct any mismatched bones using the dropdowns.
+    - Click **Fit Bones** to re-parent the bones in the cloth's Skinned Mesh Renderer.
+2.  **Scale Fitting**:
+    - After mapping bones, click **Calculate & Save Scale**. This creates a `VRClothFitterScalingData` component on your cloth object.
+    - Use the **Toggle Preview** button to see the changes in the Scene view.
+    - The scaling will be applied by NDMF when you upload your avatar.
+3.  **Mesh Deformation**:
+    - Add a `VRClothFitterDeformationData` component to your cloth object.
+    - Assign the Avatar Root.
+    - Use the "Add New Anchor Pair" button and click on your avatar and then your cloth in the Scene view to create anchor pairs.
+    - Adjust anchor positions using the handles in the Scene view.
+    - The deformation will be applied by NDMF when you upload your avatar.
 
-- [x] **ブレンドシェイプ（シェイプキー）同期**:
-    - [x] アバターのブレンドシェイプを衣装の対応するブレンドシェイプ（例：`Breasts_Big`）にリンクさせるUIを作成する。
-    - [x] Modular Avatarの`Blendshape Sync`コンポーネントのセットアップを自動化する。
-- [x] **マテリアル＆シェーダーユーティリティ**:
-    - [x] 衣装アイテムのマテリアルを、ユーザーが指定したシェーダー（例：lilToon）に一括で変換し、テクスチャの割り当てを試みるユーティリティ。
+## Development
 
-### フェーズ4：コミュニティ機能
+For details on the development plan and feature history, please see [ROADMAP.md](./ROADMAP.md).
 
-- [x] **プリセットのインポート/エクスポート**:
-    - [x] スケール調整（フェーズ1）およびメッシュ変形（フェーズ2）のデータをJSONファイルとしてエクスポートする機能を実装する。
-    - [x] JSONファイルには、対象のアバターや衣装名などのメタデータを含める。
-    - [x] JSONプリセットファイルをインポートし、対応するコンポーネントにデータを復元する機能を実装する。
+## License
 
----
-
-*このロードマップは、コミュニティからのフィードバックや開発の進捗に応じて変更される可能性があります。*
+This project is licensed under the [MIT License](./LICENSE).
