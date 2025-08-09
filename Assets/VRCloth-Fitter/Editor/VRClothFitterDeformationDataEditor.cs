@@ -1,118 +1,100 @@
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 using VRClothFitter;
 
 [CustomEditor(typeof(VRClothFitterDeformationData))]
 public class VRClothFitterDeformationDataEditor : Editor
 {
-    private static bool isEditMode = false;
-    private static VRClothFitterDeformationData currentTarget;
+    private ReorderableList anchorList;
+    private VRClothFitterDeformationData data;
 
-    // Temporary colliders for raycasting
-    private static MeshCollider avatarCollider;
-    private static MeshCollider clothCollider;
+    private void OnEnable()
+    {
+        data = (VRClothFitterDeformationData)target;
+        
+        anchorList = new ReorderableList(serializedObject, 
+            serializedObject.FindProperty("anchorPairs"), 
+            true, true, true, true);
+
+        anchorList.drawHeaderCallback = (Rect rect) => {
+            EditorGUI.LabelField(rect, "Anchor Points");
+        };
+
+        anchorList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+            var element = anchorList.serializedProperty.GetArrayElementAtIndex(index);
+            rect.y += 2;
+            EditorGUI.PropertyField(
+                new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight),
+                element.FindPropertyRelative("name"), GUIContent.none);
+        };
+    }
 
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
-
+        serializedObject.Update();
+        
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("avatarRoot"));
+        
         EditorGUILayout.Space();
-
-        string buttonText = isEditMode ? "Exit Anchor Edit Mode" : "Enter Anchor Edit Mode";
-        GUI.color = isEditMode ? Color.yellow : Color.white;
-
-        if (GUILayout.Button(buttonText))
-        {
-            isEditMode = !isEditMode;
-            if (isEditMode)
-            {
-                currentTarget = (VRClothFitterDeformationData)target;
-                SetupEditMode();
-            }
-            else
-            {
-                TeardownEditMode();
-            }
-        }
-        GUI.color = Color.white;
-
-        if (isEditMode)
-        {
-            EditorGUILayout.HelpBox("Anchor Edit Mode is active. Click on the Avatar and Cloth meshes in the Scene View to place anchors.", MessageType.Info);
-        }
-    }
-
-    private void OnDisable()
-    {
-        TeardownEditMode();
-    }
-
-    private void SetupEditMode()
-    {
-        var data = (VRClothFitterDeformationData)target;
-        if (data.avatarRoot == null)
-        {
-            Debug.LogError("Avatar Root is not set in the component.");
-            isEditMode = false;
-            return;
-        }
-
-        // Add temporary colliders for raycasting
-        avatarCollider = AddTempCollider(data.avatarRoot);
-        clothCollider = AddTempCollider(data.gameObject);
-
-        SceneView.RepaintAll();
-    }
-
-    private void TeardownEditMode()
-    {
-        if (avatarCollider != null) DestroyImmediate(avatarCollider);
-        if (clothCollider != null) DestroyImmediate(clothCollider);
-        isEditMode = false;
-        currentTarget = null;
-        SceneView.RepaintAll();
-    }
-
-    private MeshCollider AddTempCollider(GameObject obj)
-    {
-        var renderer = obj.GetComponentInChildren<SkinnedMeshRenderer>();
-        if (renderer == null) return null;
-
-        var collider = renderer.gameObject.AddComponent<MeshCollider>();
-        collider.sharedMesh = renderer.sharedMesh;
-        collider.hideFlags = HideFlags.HideAndDontSave; // This is a temporary component
-        return collider;
+        
+        anchorList.DoLayoutList();
+        
+        serializedObject.ApplyModifiedProperties();
     }
 
     private void OnSceneGUI()
     {
-        if (!isEditMode || currentTarget != (VRClothFitterDeformationData)target) return;
+        if (data == null || data.avatarRoot == null) return;
 
-        HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+        var clothTransform = data.transform;
+        var avatarTransform = data.avatarRoot.transform;
 
-        if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+        for (int i = 0; i < data.anchorPairs.Count; i++)
         {
-            Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-            
-            if (clothCollider != null && clothCollider.Raycast(ray, out RaycastHit clothHit, 100f))
-            {
-                Vector3 localPos = clothCollider.transform.InverseTransformPoint(clothHit.point);
-                Debug.Log($"[Cloth] Hit at local position: {localPos}");
-                // Anchor creation logic will go here
-            }
-            else if (avatarCollider != null && avatarCollider.Raycast(ray, out RaycastHit avatarHit, 100f))
-            {
-                Vector3 localPos = avatarCollider.transform.InverseTransformPoint(avatarHit.point);
-                Debug.Log($"[Avatar] Hit at local position: {localPos}");
-                // Anchor creation logic will go here
-            }
-            
-            Event.current.Use();
-        }
+            var pair = data.anchorPairs[i];
 
-        if (Event.current.type == EventType.Repaint)
-        {
-            // Anchor drawing logic will go here
+            // --- Draw Avatar Anchor ---
+            Handles.color = Color.blue;
+            Vector3 avatarWorldPos = avatarTransform.TransformPoint(pair.avatarAnchor);
+            
+            if (anchorList.index == i) // If this anchor is selected in the list
+            {
+                EditorGUI.BeginChangeCheck();
+                avatarWorldPos = Handles.PositionHandle(avatarWorldPos, Quaternion.identity);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(data, "Move Avatar Anchor");
+                    pair.avatarAnchor = avatarTransform.InverseTransformPoint(avatarWorldPos);
+                }
+            }
+            else
+            {
+                Handles.SphereHandleCap(0, avatarWorldPos, Quaternion.identity, 0.02f, EventType.Repaint);
+            }
+
+            // --- Draw Cloth Anchor ---
+            Handles.color = Color.green;
+            Vector3 clothWorldPos = clothTransform.TransformPoint(pair.clothAnchor);
+
+            if (anchorList.index == i) // If this anchor is selected in the list
+            {
+                EditorGUI.BeginChangeCheck();
+                clothWorldPos = Handles.PositionHandle(clothWorldPos, Quaternion.identity);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(data, "Move Cloth Anchor");
+                    pair.clothAnchor = clothTransform.InverseTransformPoint(clothWorldPos);
+                }
+            }
+            else
+            {
+                Handles.SphereHandleCap(0, clothWorldPos, Quaternion.identity, 0.02f, EventType.Repaint);
+            }
+            
+            // --- Draw Line between pair ---
+            Handles.color = Color.yellow;
+            Handles.DrawLine(avatarWorldPos, clothWorldPos);
         }
     }
 }
