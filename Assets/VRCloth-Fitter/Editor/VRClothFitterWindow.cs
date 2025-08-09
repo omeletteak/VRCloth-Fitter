@@ -216,35 +216,98 @@ public class VRClothFitterWindow : EditorWindow
         var avatarBones = avatarRenderer.bones.ToDictionary(b => b.name, b => b);
         var clothBonesOriginal = clothRenderer.bones.ToDictionary(b => b.name, b => b);
 
+        // Pre-calculate bone radii for efficiency
+        var avatarBoneRadii = CalculateAllBoneRadii(avatarRenderer);
+        var clothBoneRadii = CalculateAllBoneRadii(clothRenderer);
+
         for (int i = 0; i < clothBoneNames.Count; i++)
         {
             string clothBoneName = clothBoneNames[i];
             int selectedIndex = mappedBoneIndices[i];
 
-            if (selectedIndex == 0 || !clothBonesOriginal.TryGetValue(clothBoneName, out var clothBone) || clothBone.childCount == 0) continue;
+            if (selectedIndex == 0 || !clothBonesOriginal.TryGetValue(clothBoneName, out var clothBone)) continue;
 
             string selectedBoneName = avatarBoneNamesArray[selectedIndex];
-            if (!avatarBones.TryGetValue(selectedBoneName, out Transform avatarBone) || avatarBone.childCount == 0)
+            if (!avatarBones.TryGetValue(selectedBoneName, out Transform avatarBone))
             {
                 continue;
             }
 
-            float clothBoneLength = Vector3.Distance(clothBone.position, clothBone.GetChild(0).position);
-            float avatarBoneLength = Vector3.Distance(avatarBone.position, avatarBone.GetChild(0).position);
-
-            if (clothBoneLength > 0.0001f && avatarBoneLength > 0.0001f)
+            // Calculate length scale
+            float scaleY = 1.0f;
+            if (clothBone.childCount > 0 && avatarBone.childCount > 0)
             {
-                float scaleRatio = avatarBoneLength / clothBoneLength;
-                
-                var info = new BoneScaleInfo
+                float clothBoneLength = Vector3.Distance(clothBone.position, clothBone.GetChild(0).position);
+                float avatarBoneLength = Vector3.Distance(avatarBone.position, avatarBone.GetChild(0).position);
+                if (clothBoneLength > 0.0001f)
                 {
-                    boneName = clothBoneName,
-                    scale = Vector3.one * scaleRatio
-                };
-                scalingData.boneScales.Add(info);
+                    scaleY = avatarBoneLength / clothBoneLength;
+                }
             }
+
+            // Calculate thickness scale
+            float scaleXZ = 1.0f;
+            if (avatarBoneRadii.TryGetValue(avatarBone.name, out float avatarRadius) && clothBoneRadii.TryGetValue(clothBone.name, out float clothRadius))
+            {
+                if (clothRadius > 0.0001f)
+                {
+                    scaleXZ = avatarRadius / clothRadius;
+                }
+            }
+
+            var info = new BoneScaleInfo
+            {
+                boneName = clothBoneName,
+                scale = new Vector3(scaleXZ, scaleY, scaleXZ)
+            };
+            scalingData.boneScales.Add(info);
         }
         
         EditorUtility.DisplayDialog("Success", $"{scalingData.boneScales.Count}個のボーンスケール情報を計算し、{clothObject.name}のVRClothFitterScalingDataコンポーネントに保存しました。", "OK");
+    }
+
+    private Dictionary<string, float> CalculateAllBoneRadii(SkinnedMeshRenderer renderer)
+    {
+        var boneRadii = new Dictionary<string, float>();
+        if (renderer == null || renderer.sharedMesh == null) return boneRadii;
+
+        var mesh = renderer.sharedMesh;
+        var boneWeights = mesh.GetAllBoneWeights();
+        var vertices = mesh.vertices;
+        var bones = renderer.bones;
+
+        var boneVertexLists = new Dictionary<int, List<Vector3>>();
+        for (int i = 0; i < bones.Length; i++)
+        {
+            boneVertexLists[i] = new List<Vector3>();
+        }
+
+        for (int i = 0; i < boneWeights.Length; i++)
+        {
+            var boneWeight = boneWeights[i];
+            if (boneWeight.boneIndex0 >= 0 && boneWeight.weight0 > 0) boneVertexLists[boneWeight.boneIndex0].Add(vertices[i]);
+            if (boneWeight.boneIndex1 >= 0 && boneWeight.weight1 > 0) boneVertexLists[boneWeight.boneIndex1].Add(vertices[i]);
+            if (boneWeight.boneIndex2 >= 0 && boneWeight.weight2 > 0) boneVertexLists[boneWeight.boneIndex2].Add(vertices[i]);
+            if (boneWeight.boneIndex3 >= 0 && boneWeight.weight3 > 0) boneVertexLists[boneWeight.boneIndex3].Add(vertices[i]);
+        }
+
+        for (int i = 0; i < bones.Length; i++)
+        {
+            var bone = bones[i];
+            var vertexList = boneVertexLists[i];
+            if (vertexList.Count == 0) continue;
+
+            float totalDistance = 0;
+            foreach (var vertex in vertexList)
+            {
+                // Transform vertex from local mesh space to world space
+                var worldVertex = renderer.transform.TransformPoint(vertex);
+                // Project vertex onto the bone's line and find the distance
+                totalDistance += Vector3.Distance(worldVertex, bone.position); // Simplified radius calculation
+            }
+            boneRadii[bone.name] = totalDistance / vertexList.Count;
+        }
+
+        return boneRadii;
     }
 }
