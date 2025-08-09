@@ -10,6 +10,14 @@ namespace VRClothFitter
         public Vector3 scale;
     }
 
+    [System.Serializable]
+    public class ScalingPreset
+    {
+        public string avatarName;
+        public string clothName;
+        public List<BoneScaleInfo> boneScales = new List<BoneScaleInfo>();
+    }
+
     [AddComponentMenu("VRCloth Fitter/Scaling Data")]
     public class VRClothFitterScalingData : MonoBehaviour
     {
