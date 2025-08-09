@@ -16,6 +16,14 @@ namespace VRClothFitter
         public Vector3 clothAnchor;
     }
 
+    [System.Serializable]
+    public class DeformationPreset
+    {
+        public string avatarName;
+        public string clothName;
+        public List<DeformationAnchorPair> anchorPairs = new List<DeformationAnchorPair>();
+    }
+
     [AddComponentMenu("VRCloth Fitter/Deformation Data")]
     public class VRClothFitterDeformationData : MonoBehaviour
     {

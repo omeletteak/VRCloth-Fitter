@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using VRClothFitter;
+using System.IO;
 
 [CustomEditor(typeof(VRClothFitterDeformationData))]
 public class VRClothFitterDeformationDataEditor : Editor
@@ -71,6 +72,54 @@ public class VRClothFitterDeformationDataEditor : Editor
             }
         }
         GUI.color = Color.white;
+
+        EditorGUILayout.Space();
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Export Preset")) ExportPreset();
+        if (GUILayout.Button("Import Preset")) ImportPreset();
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void ExportPreset()
+    {
+        var preset = new DeformationPreset
+        {
+            avatarName = data.avatarRoot != null ? data.avatarRoot.name : "UnknownAvatar",
+            clothName = data.gameObject.name,
+            anchorPairs = data.anchorPairs
+        };
+
+        string path = EditorUtility.SaveFilePanel("Export Deformation Preset", "", $"{preset.clothName}_on_{preset.avatarName}.json", "json");
+
+        if (string.IsNullOrEmpty(path)) return;
+
+        string json = JsonUtility.ToJson(preset, true);
+        File.WriteAllText(path, json);
+        EditorUtility.DisplayDialog("Export Successful", $"Preset saved to:\n{{path}}", "OK");
+    }
+
+    private void ImportPreset()
+    {
+        string path = EditorUtility.OpenFilePanel("Import Deformation Preset", "", "json");
+
+        if (string.IsNullOrEmpty(path)) return;
+
+        string json = File.ReadAllText(path);
+        var preset = JsonUtility.FromJson<DeformationPreset>(json);
+
+        if (preset == null || preset.anchorPairs == null)
+        {
+            EditorUtility.DisplayDialog("Import Failed", "Invalid preset file.", "OK");
+            return;
+        }
+
+        if (EditorUtility.DisplayDialog("Confirm Import", 
+            $"Import preset for '{{preset.clothName}}' on '{{preset.avatarName}}'?\nThis will overwrite current anchor data.", 
+            "Import", "Cancel"))
+        {
+            Undo.RecordObject(data, "Import Deformation Preset");
+            data.anchorPairs = preset.anchorPairs;
+        }
     }
 
     private void StartPlacing()
@@ -177,7 +226,7 @@ public class VRClothFitterDeformationDataEditor : Editor
                     Undo.RecordObject(data, "Add Anchor Pair");
                     data.anchorPairs.Add(new DeformationAnchorPair
                     {
-                        name = $"Anchor {data.anchorPairs.Count + 1}",
+                        name = $"Anchor {{data.anchorPairs.Count + 1}}",
                         avatarAnchor = pendingAvatarAnchor,
                         clothAnchor = clothAnchorPos
                     });
