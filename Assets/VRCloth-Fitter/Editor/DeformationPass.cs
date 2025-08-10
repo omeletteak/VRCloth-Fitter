@@ -1,6 +1,7 @@
 using nadena.dev.ndmf;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 [assembly: ExportsPlugin(typeof(VRClothFitter.DeformationPassPlugin))]
