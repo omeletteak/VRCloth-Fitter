@@ -135,7 +135,7 @@ namespace VRClothFitter
                         }
                     }
                 }
-                EndScrollView();
+                EditorGUILayout.EndScrollView();
                 
                 if (GUILayout.Button("2. Generate Ghost Avatar & Use for Scaling"))
                 {
@@ -353,10 +353,10 @@ namespace VRClothFitter
                 appliedCount++;
             }
 
-            var mergeArmature = clothObject.GetComponent<MA Merge Armature>();
+            var mergeArmature = clothObject.GetComponent<MergeArmature>();
             if (mergeArmature == null)
             {
-                mergeArmature = Undo.AddComponent<MA Merge Armature>(clothObject);
+                mergeArmature = Undo.AddComponent<MergeArmature>(clothObject);
             }
             Undo.RecordObject(mergeArmature, "Configure MA Merge Armature");
             mergeArmature.matchBoneScale = true;
@@ -423,7 +423,6 @@ namespace VRClothFitter
             var materials = clothRenderer.sharedMaterials;
             var newVertices = new Vector3[vertices.Length];
 
-            // Build a set of hard material indices for quick lookup
             var hardMaterialIndices = new HashSet<int>();
             for (int i = 0; i < materials.Length; i++)
             {
@@ -433,7 +432,6 @@ namespace VRClothFitter
                 }
             }
 
-            // Map each vertex to its submesh/material index
             var vertexToSubmeshMap = new Dictionary<int, int>();
             for (int i = 0; i < originalMesh.subMeshCount; i++)
             {
@@ -443,17 +441,14 @@ namespace VRClothFitter
                 }
             }
 
-            // Move vertices inwards if they are not part of a hard material
             for (int i = 0; i < vertices.Length; i++)
             {
                 if (vertexToSubmeshMap.TryGetValue(i, out int submeshIndex) && hardMaterialIndices.Contains(submeshIndex))
                 {
-                    newVertices[i] = vertices[i]; // This is a hard part, don't move it
+                    newVertices[i] = vertices[i];
                 }
                 else
                 {
-                    // This is a soft part, move it inwards
-                    // TODO: Use a more intelligent skin distance value
                     float skinDistance = 0.01f; 
                     newVertices[i] = vertices[i] - (normals[i] * skinDistance);
                 }
@@ -463,17 +458,14 @@ namespace VRClothFitter
             ghostMesh.RecalculateBounds();
             ghostMesh.RecalculateNormals();
 
-            // Create a temporary GameObject to hold the ghost mesh for comparison
             var ghostObject = new GameObject("_GhostForScaling");
             var ghostRenderer = ghostObject.AddComponent<SkinnedMeshRenderer>();
             ghostRenderer.sharedMesh = ghostMesh;
             ghostRenderer.bones = clothRenderer.bones;
             ghostRenderer.rootBone = clothRenderer.rootBone;
 
-            // Use the ghost to perform the scaling
             CalculateAndApplyProportionalScale(ghostRenderer);
 
-            // Clean up the temporary object
             DestroyImmediate(ghostObject);
         }
 
@@ -530,7 +522,7 @@ namespace VRClothFitter
             if (renderer == null) return;
 
             if (!EditorUtility.DisplayDialog("Confirm Material Conversion",
-                "This will create new materials and replace them on '" + clothObject.name + "'. The original material assets will not be modified.\n\nContinue?",
+                $"This will create new materials and replace them on '{clothObject.name}'. The original material assets will not be modified.\n\nContinue?",
                 "Convert", "Cancel"))
             {
                 return;
@@ -555,7 +547,7 @@ namespace VRClothFitter
                 
                 string path = AssetDatabase.GetAssetPath(oldMat);
                 string dir = string.IsNullOrEmpty(path) ? "Assets" : Path.GetDirectoryName(path);
-                string newPath = AssetDatabase.GenerateUniqueAssetPath($"{dir}/{newMat.name}.mat");
+                string newPath = AssetDatabase.GenerateUniqueAssetPath($"{dir}/{{newMat.name}}.mat");
                 AssetDatabase.CreateAsset(newMat, newPath);
 
                 newMaterials[i] = newMat;
