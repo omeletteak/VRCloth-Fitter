@@ -50,6 +50,17 @@ namespace VRClothFitter
         {
             serializedObject.Update();
 
+            // 自動で親のアバターを検出する
+            if (fitter.targetAvatarObject == null)
+            {
+                var parentAnimator = fitter.GetComponentInParent<Animator>();
+                if (parentAnimator != null)
+                {
+                    fitter.targetAvatarObject = parentAnimator.gameObject;
+                    EditorUtility.SetDirty(fitter);
+                }
+            }
+
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(serializedObject.FindProperty("targetAvatarObject"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("sourceAvatarObject"));
