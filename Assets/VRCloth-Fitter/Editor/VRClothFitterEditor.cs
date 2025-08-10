@@ -165,7 +165,7 @@ namespace VRClothFitter
                     GUILayout.Label(VRClothFitterLocalization.Tr("No blendshapes found."));
                 }
             }
-            EndScrollView();
+            EditorGUILayout.EndScrollView();
             if (GUILayout.Button(VRClothFitterLocalization.Tr("Apply Blendshape Sync"))) ApplyBlendshapeSync();
         }
 
@@ -188,7 +188,7 @@ namespace VRClothFitter
                     GUILayout.Label(VRClothFitterLocalization.Tr("No materials found on cloth object."));
                 }
             }
-            EndScrollView();
+            EditorGUILayout.EndScrollView();
 
             if (GUILayout.Button(VRClothFitterLocalization.Tr("Convert Materials"))) ConvertMaterials();
         }
@@ -522,7 +522,7 @@ namespace VRClothFitter
             if (renderer == null) return;
 
             if (!EditorUtility.DisplayDialog("Confirm Material Conversion",
-                $"This will create new materials and replace them on '{clothObject.name}'. The original material assets will not be modified.\n\nContinue?",
+                "This will create new materials and replace them on '" + clothObject.name + "'. The original material assets will not be modified.\n\nContinue?",
                 "Convert", "Cancel"))
             {
                 return;
