@@ -106,7 +106,7 @@ namespace VRClothFitter
 
             if (GUILayout.Button("Calculate & Apply Proportional Scale"))
             {
-                CalculateAndApplyProportionalScale();
+                CalculateAndApplyProportionalScale(null); // Pass null for normal operation
             }
         }
         
@@ -126,7 +126,6 @@ namespace VRClothFitter
                 EditorGUILayout.LabelField("Select Hard Surface Materials:", EditorStyles.boldLabel);
                 scrollPositionHardMaterials = EditorGUILayout.BeginScrollView(scrollPositionHardMaterials, EditorStyles.helpBox, GUILayout.Height(100));
                 {
-                    // Use a temporary list to avoid modification during iteration
                     var keys = new List<Material>(selectedHardMaterials.Keys);
                     foreach (var mat in keys)
                     {
@@ -136,12 +135,11 @@ namespace VRClothFitter
                         }
                     }
                 }
-                EditorGUILayout.EndScrollView();
+                EndScrollView();
                 
                 if (GUILayout.Button("2. Generate Ghost Avatar & Use for Scaling"))
                 {
-                    // Logic to be implemented
-                    EditorUtility.DisplayDialog("Not Implemented", "Ghost Avatar generation is not yet implemented.", "OK");
+                    GenerateGhostAndScale();
                 }
             }
         }
@@ -167,7 +165,7 @@ namespace VRClothFitter
                     GUILayout.Label(VRClothFitterLocalization.Tr("No blendshapes found."));
                 }
             }
-            EditorGUILayout.EndScrollView();
+            EndScrollView();
             if (GUILayout.Button(VRClothFitterLocalization.Tr("Apply Blendshape Sync"))) ApplyBlendshapeSync();
         }
 
@@ -190,7 +188,7 @@ namespace VRClothFitter
                     GUILayout.Label(VRClothFitterLocalization.Tr("No materials found on cloth object."));
                 }
             }
-            EditorGUILayout.EndScrollView();
+            EndScrollView();
 
             if (GUILayout.Button(VRClothFitterLocalization.Tr("Convert Materials"))) ConvertMaterials();
         }
@@ -312,9 +310,9 @@ namespace VRClothFitter
             return targetAvatarRenderer != null && clothRenderer != null;
         }
     
-        private void CalculateAndApplyProportionalScale()
+        private void CalculateAndApplyProportionalScale(SkinnedMeshRenderer ghostRenderer)
         {
-            if (!GetRenderers(out var targetAvatarRenderer, out var clothRenderer, out var sourceAvatarRenderer))
+            if (!GetRenderers(out var targetAvatarRenderer, out var clothRenderer, out var sourceAvatarRenderer) && ghostRenderer == null)
             {
                 EditorUtility.DisplayDialog("Error", "Avatar and Cloth must be set and contain SkinnedMeshRenderers.", "OK");
                 return;
@@ -323,7 +321,7 @@ namespace VRClothFitter
             var clothBones = clothRenderer.bones;
             Undo.RecordObjects(clothBones, "Apply Proportional Scale to Bones");
 
-            var sourceComparisonRenderer = sourceAvatarRenderer != null ? sourceAvatarRenderer : clothRenderer;
+            var sourceComparisonRenderer = ghostRenderer != null ? ghostRenderer : (sourceAvatarRenderer != null ? sourceAvatarRenderer : clothRenderer);
 
             var targetAvatarBonesDict = targetAvatarRenderer.bones.ToDictionary(b => b.name, b => b);
             var sourceBonesDict = sourceComparisonRenderer.bones.ToDictionary(b => b.name, b => b);
@@ -380,30 +378,21 @@ namespace VRClothFitter
             var materials = clothRenderer.sharedMaterials;
             var candidateMaterialSet = new HashSet<Material>();
 
-            // Create a map of vertex index to submesh index (material index)
-            var vertexToSubmeshMap = new int[mesh.vertexCount];
-            int vertexIndex = 0;
+            var vertexToSubmeshMap = new Dictionary<int, int>();
             for (int i = 0; i < mesh.subMeshCount; i++)
             {
-                var submesh = mesh.GetSubMesh(i);
-                for (int j = 0; j < submesh.vertexCount; j++)
+                foreach (var vertIndex in mesh.GetTriangles(i))
                 {
-                    // This mapping is not perfect but a decent approximation
-                    if (vertexIndex < mesh.vertexCount)
-                    {
-                        vertexToSubmeshMap[vertexIndex++] = i;
-                    }
+                    vertexToSubmeshMap[vertIndex] = i;
                 }
             }
 
             for (int i = 0; i < boneWeights.Length; i++)
             {
                 var weight = boneWeights[i];
-                // Check if the vertex is influenced by only one bone
                 if (weight.weight0 > 0.99f && weight.weight1 == 0 && weight.weight2 == 0 && weight.weight3 == 0)
                 {
-                    int submeshIndex = vertexToSubmeshMap[i];
-                    if (submeshIndex < materials.Length)
+                    if (vertexToSubmeshMap.TryGetValue(i, out int submeshIndex) && submeshIndex < materials.Length)
                     {
                         candidateMaterialSet.Add(materials[submeshIndex]);
                     }
@@ -418,6 +407,74 @@ namespace VRClothFitter
             }
             
             EditorUtility.DisplayDialog("Detection Complete", $"{hardPartCandidateMaterials.Count} candidate materials for hard parts were found based on bone weights.", "OK");
+        }
+
+        private void GenerateGhostAndScale()
+        {
+            var clothRenderer = clothObject.GetComponentInChildren<SkinnedMeshRenderer>();
+            if (clothRenderer == null || clothRenderer.sharedMesh == null) return;
+
+            var originalMesh = clothRenderer.sharedMesh;
+            var ghostMesh = Instantiate(originalMesh);
+            ghostMesh.name = $"{originalMesh.name} (Ghost)";
+
+            var vertices = originalMesh.vertices;
+            var normals = originalMesh.normals;
+            var materials = clothRenderer.sharedMaterials;
+            var newVertices = new Vector3[vertices.Length];
+
+            // Build a set of hard material indices for quick lookup
+            var hardMaterialIndices = new HashSet<int>();
+            for (int i = 0; i < materials.Length; i++)
+            {
+                if (selectedHardMaterials.ContainsKey(materials[i]) && selectedHardMaterials[materials[i]])
+                {
+                    hardMaterialIndices.Add(i);
+                }
+            }
+
+            // Map each vertex to its submesh/material index
+            var vertexToSubmeshMap = new Dictionary<int, int>();
+            for (int i = 0; i < originalMesh.subMeshCount; i++)
+            {
+                foreach (var vertIndex in originalMesh.GetTriangles(i))
+                {
+                    vertexToSubmeshMap[vertIndex] = i;
+                }
+            }
+
+            // Move vertices inwards if they are not part of a hard material
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                if (vertexToSubmeshMap.TryGetValue(i, out int submeshIndex) && hardMaterialIndices.Contains(submeshIndex))
+                {
+                    newVertices[i] = vertices[i]; // This is a hard part, don't move it
+                }
+                else
+                {
+                    // This is a soft part, move it inwards
+                    // TODO: Use a more intelligent skin distance value
+                    float skinDistance = 0.01f; 
+                    newVertices[i] = vertices[i] - (normals[i] * skinDistance);
+                }
+            }
+
+            ghostMesh.vertices = newVertices;
+            ghostMesh.RecalculateBounds();
+            ghostMesh.RecalculateNormals();
+
+            // Create a temporary GameObject to hold the ghost mesh for comparison
+            var ghostObject = new GameObject("_GhostForScaling");
+            var ghostRenderer = ghostObject.AddComponent<SkinnedMeshRenderer>();
+            ghostRenderer.sharedMesh = ghostMesh;
+            ghostRenderer.bones = clothRenderer.bones;
+            ghostRenderer.rootBone = clothRenderer.rootBone;
+
+            // Use the ghost to perform the scaling
+            CalculateAndApplyProportionalScale(ghostRenderer);
+
+            // Clean up the temporary object
+            DestroyImmediate(ghostObject);
         }
 
         private Dictionary<string, float> CalculateAllBoneRadii(SkinnedMeshRenderer renderer)
@@ -473,7 +530,7 @@ namespace VRClothFitter
             if (renderer == null) return;
 
             if (!EditorUtility.DisplayDialog("Confirm Material Conversion",
-                $"This will create new materials and replace them on '{clothObject.name}'. The original material assets will not be modified.\n\nContinue?",
+                "This will create new materials and replace them on '" + clothObject.name + "'. The original material assets will not be modified.\n\nContinue?",
                 "Convert", "Cancel"))
             {
                 return;
