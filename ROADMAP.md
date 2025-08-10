@@ -2,45 +2,51 @@
 
 This document outlines the development plan and feature history for VRCloth-Fitter.
 
-## Goal
+## Core Philosophy
 
-The goal of this tool is to provide a robust, community-driven suite of features for avatar outfit customization, ensuring a non-destructive workflow.
+The goal of this tool is to provide a robust, intuitive suite of features for avatar outfit customization. Our core philosophy is to **avoid reinventing the wheel** by leveraging the powerful, industry-standard features of **Modular Avatar (MA)** wherever possible.
 
-### Phase 1: Basic Scale Fitting (Backend)
-- [x] **Scale Calculation**
-- [x] **Scaling Application (NDMF Pass)**
+VRCloth-Fitter's primary role is to act as an **intelligent setup utility** for MA components, providing advanced calculations and automation that MA itself does not offer, ensuring a seamless and non-destructive workflow for the user.
 
-### Phase 2: Advanced Mesh Deformation (Backend)
-- [x] **Deformation Data Component**
-- [x] **Mesh Deformation Algorithm**
-- [x] **Non-Destructive Application (NDMF Pass)**
+### Phase 1: Proof of Concept (Legacy)
 
-### Phase 3: Feature Enhancements (Backend & Logic)
-- [x] **Blendshape (Shape Key) Sync Logic**
-- [x] **Material & Shader Utility Logic**
-- [x] **UI Localization System**
+- [x] **Initial Implementation**: Developed a standalone, window-based tool with custom NDMF passes for bone scaling and mesh deformation. This phase validated the core fitting algorithms.
 
-### Phase 4: Community Features
+### Phase 2: Architectural Refactor - Synergy with Modular Avatar
+
+This phase marks a fundamental shift in architecture to deeply integrate with Modular Avatar, delegating core functionality to it for maximum stability and simplicity.
+
+- [x] **UI/UX Overhaul**:
+    - [x] Migrated from an editor window to a modern, intuitive component-based workflow (`VRClothFitter` component and custom editor).
+- [ ] **Deprecate Custom Scaling System**:
+    - [ ] **Remove `ScalingPass.cs` and `VRClothFitterScalingData.cs`**. Build-time scaling is now fully delegated to `MA Merge Armature`.
+- [ ] **Redefine "Calculate Scale" Feature**:
+    - [ ] The "Calculate Scale" button no longer saves data to a custom component. Its new role is to:
+        1.  Calculate the **proportional differences** (bone length and thickness) between the avatar and the cloth's original armature.
+        2.  Apply these calculated scales **directly to the cloth prefab's bone transforms** as a one-time setup step.
+- [ ] **Automate `MA Merge Armature` Setup**:
+    - [ ] The "Calculate Scale" button now automatically adds the `MA Merge Armature` component to the cloth.
+    - [ ] It ensures the `Match Bone Scale` option is enabled, allowing MA to handle all future scaling adjustments (e.g., from avatar height sliders) non-destructively at build time.
+- [ ] **Deprecate `Fit Bones` Feature**:
+    - [ ] Manual bone parenting is now fully delegated to `MA Merge Armature`, making the `Fit Bones` button obsolete.
+
+### Phase 3: Advanced Fitting Features
+
+These features provide value beyond what Modular Avatar offers natively.
+
+- [x] **Advanced Mesh Deformation**:
+    - [x] A system to directly modify the clothing mesh using control anchors to fix complex fitting issues, especially where proportions differ significantly (e.g., lower body). This remains a core, unique feature of VRCloth-Fitter.
+- [x] **Blendshape Sync Helper**:
+    - [x] A UI to easily map blendshapes and automatically configure the `MA Blendshape Sync` component.
+- [x] **Material & Shader Utility**:
+    - [x] A utility to batch-convert materials to a target shader.
+
+### Phase 4: Community & Future Features
+
 - [x] **Preset Import/Export**:
-    - [x] Implement functionality to export/import scaling and deformation data as JSON files.
+    - [x] A system to save and load fitting settings (mesh deformation anchors, etc.) as JSON files.
 - [ ] **Improve Preset System with GUIDs**:
-    - [ ] Store the source avatar's Prefab GUID in the exported preset file.
-    - [ ] On import, search the project for a matching GUID to automatically detect the target avatar.
-    - [ ] Implement a fallback to search by avatar name if no matching GUID is found.
-
-### Phase 5: UI/UX Overhaul (Component-Based Workflow)
-- [x] **Create Main Component (`VRClothFitter.cs`)**:
-    - [x] Develop a new main component that users will add to their cloth objects. This component will hold the reference to the target avatar.
-- [x] **Create Custom Editor (`VRClothFitterEditor.cs`)**:
-    - [x] Migrate all UI and logic from the old `VRClothFitterWindow` into a new custom editor for the `VRClothFitter` component.
-    - [x] This will provide a more intuitive, Inspector-based workflow similar to Modular Avatar.
-- [x] **Integrate All Features into Custom Editor**:
-    - [x] **Bone Mapping UI**: Re-implement the bone mapping interface within the new custom editor.
-    - [x] **Blendshape Sync UI**: Re-implement the blendshape sync interface.
-    - [x] **Material Utility UI**: Re-implement the material conversion utility.
-    - [x] **Preview Functionality**: Integrate the real-time preview button.
-- [x] **Deprecate Old Editor Window**:
-    - [x] Remove the `[MenuItem]` attribute to hide the old window, eventually phasing out the `VRClothFitterWindow.cs` file.
+    - [ ] Enhance presets to use avatar Prefab GUIDs for more reliable, automatic avatar detection.
 
 ---
 
