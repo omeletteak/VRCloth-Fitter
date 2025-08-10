@@ -29,18 +29,18 @@ The goal of this tool is to provide a robust, community-driven suite of features
     - [ ] Implement a fallback to search by avatar name if no matching GUID is found.
 
 ### Phase 5: UI/UX Overhaul (Component-Based Workflow)
-- [ ] **Create Main Component (`VRClothFitter.cs`)**:
-    - [ ] Develop a new main component that users will add to their cloth objects. This component will hold the reference to the target avatar.
-- [ ] **Create Custom Editor (`VRClothFitterEditor.cs`)**:
-    - [ ] Migrate all UI and logic from the old `VRClothFitterWindow` into a new custom editor for the `VRClothFitter` component.
-    - [ ] This will provide a more intuitive, Inspector-based workflow similar to Modular Avatar.
-- [ ] **Integrate All Features into Custom Editor**:
-    - [ ] **Bone Mapping UI**: Re-implement the bone mapping interface within the new custom editor.
-    - [ ] **Blendshape Sync UI**: Re-implement the blendshape sync interface.
-    - [ ] **Material Utility UI**: Re-implement the material conversion utility.
-    - [ ] **Preview Functionality**: Integrate the real-time preview button.
-- [ ] **Deprecate Old Editor Window**:
-    - [ ] Remove the `[MenuItem]` attribute to hide the old window, eventually phasing out the `VRClothFitterWindow.cs` file.
+- [x] **Create Main Component (`VRClothFitter.cs`)**:
+    - [x] Develop a new main component that users will add to their cloth objects. This component will hold the reference to the target avatar.
+- [x] **Create Custom Editor (`VRClothFitterEditor.cs`)**:
+    - [x] Migrate all UI and logic from the old `VRClothFitterWindow` into a new custom editor for the `VRClothFitter` component.
+    - [x] This will provide a more intuitive, Inspector-based workflow similar to Modular Avatar.
+- [x] **Integrate All Features into Custom Editor**:
+    - [x] **Bone Mapping UI**: Re-implement the bone mapping interface within the new custom editor.
+    - [x] **Blendshape Sync UI**: Re-implement the blendshape sync interface.
+    - [x] **Material Utility UI**: Re-implement the material conversion utility.
+    - [x] **Preview Functionality**: Integrate the real-time preview button.
+- [x] **Deprecate Old Editor Window**:
+    - [x] Remove the `[MenuItem]` attribute to hide the old window, eventually phasing out the `VRClothFitterWindow.cs` file.
 
 ---
 
