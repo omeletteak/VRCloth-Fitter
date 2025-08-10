@@ -80,4 +80,7 @@ crash.log
 
 # Rider
 .idea/
+
+# Build scripts
+*.bat
 "/Memos/" 
