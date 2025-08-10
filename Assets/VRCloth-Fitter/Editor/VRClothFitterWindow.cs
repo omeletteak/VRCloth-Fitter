@@ -43,7 +43,7 @@ public class VRClothFitterWindow : EditorWindow
     
     private GUIStyle boldLabelStyle;
 
-    [MenuItem("Tools/VRCloth Fitter")]
+    // [MenuItem("Tools/VRCloth Fitter")]
     public static void ShowWindow()
     {
         GetWindow<VRClothFitterWindow>("VRCloth Fitter");
