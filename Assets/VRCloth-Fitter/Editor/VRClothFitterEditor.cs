@@ -8,6 +8,11 @@ using nadena.dev.modular_avatar.core;
 
 namespace VRClothFitter
 {
+    /// <summary>
+    /// Custom editor for the VRClothFitter component.
+    /// This script provides an intuitive, Inspector-based UI for all fitting operations,
+    /// migrating the logic from the old window-based system.
+    /// </summary>
     [CustomEditor(typeof(VRClothFitter))]
     public class VRClothFitterEditor : Editor
     {

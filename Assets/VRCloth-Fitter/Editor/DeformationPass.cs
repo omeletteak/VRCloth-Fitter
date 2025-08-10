@@ -8,6 +8,11 @@ using UnityEngine;
 
 namespace VRClothFitter
 {
+    /// <summary>
+    /// This NDMF Plugin runs during the avatar build process.
+    /// It creates a new, deformed mesh asset based on the anchor data
+    /// without modifying the original, ensuring a non-destructive workflow.
+    /// </summary>
     public class DeformationPassPlugin : Plugin<DeformationPassPlugin>
     {
         public override string QualifiedName => "dev.omelette.vrcloth-fitter.deformation-pass";

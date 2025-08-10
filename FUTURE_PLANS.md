@@ -35,8 +35,26 @@ The "diff data" required to realize this concept would consist of the following 
     *   The **difference vectors of vertex coordinates** at representative anchor points between the two avatars.
     *   This defines a mapping to transform the body shape of one avatar to another.
 
-## Benefits
+## Community Growth: The Preset Hub Concept
 
-*   **Increased Reusability of Presets**: Cloth presets created for one popular avatar could be utilized across a wide range of other avatars.
-*   **Reduced User Workload**: Users would only need a "Body Shape Diff Preset" between their own avatar and another popular avatar to easily fit many clothes.
-*   **Community Growth**: "Body Shape Diff Presets" themselves could become valuable, shareable assets created and distributed by the community.
+To make preset sharing seamless, a future goal is to create an online database of presets that the tool can sync with directly. This would eliminate the need for users to manually download and manage JSON files.
+
+### High-Level Architecture
+
+-   **Web Backend**: A server with a database and API to store and manage preset data (JSONs, metadata like avatar GUIDs, tags, ratings, etc.).
+-   **Unity Editor Client**: A UI integrated into the VRCloth-Fitter inspector that communicates with the backend to search, download, and upload presets.
+
+### Potential Technical Stack
+
+-   **Backend**: Node.js (Express), Python (FastAPI), Ruby on Rails, etc.
+-   **Database**: PostgreSQL, MySQL, SQLite, etc.
+-   **Hosting**: Heroku, Vercel, AWS, GCP, or other cloud providers.
+
+### Draft API Endpoints (v1)
+
+-   `GET /presets/search?avatarGuid=...&clothName=...`: Search for presets.
+-   `POST /presets/upload`: Upload a new preset.
+
+### A Call for Collaboration
+
+This is a significant undertaking that requires web development expertise. If you are a web developer interested in making this platform a reality, your contributions would be highly welcome! Please open an issue on GitHub to discuss this further.
