@@ -117,7 +117,7 @@ namespace VRClothFitter
 
             if (GUILayout.Button("1. Detect Hard Part Candidates"))
             {
-                // Logic to be implemented
+                DetectHardPartCandidates();
             }
 
             // UI for hard material selection
@@ -126,11 +126,13 @@ namespace VRClothFitter
                 EditorGUILayout.LabelField("Select Hard Surface Materials:", EditorStyles.boldLabel);
                 scrollPositionHardMaterials = EditorGUILayout.BeginScrollView(scrollPositionHardMaterials, EditorStyles.helpBox, GUILayout.Height(100));
                 {
-                    foreach (var mat in hardPartCandidateMaterials)
+                    // Use a temporary list to avoid modification during iteration
+                    var keys = new List<Material>(selectedHardMaterials.Keys);
+                    foreach (var mat in keys)
                     {
                         if (mat != null)
                         {
-                            selectedHardMaterials[mat] = EditorGUILayout.ToggleLeft(mat.name, selectedHardMaterials.ContainsKey(mat) && selectedHardMaterials[mat]);
+                            selectedHardMaterials[mat] = EditorGUILayout.ToggleLeft(mat.name, selectedHardMaterials[mat]);
                         }
                     }
                 }
@@ -139,6 +141,7 @@ namespace VRClothFitter
                 if (GUILayout.Button("2. Generate Ghost Avatar & Use for Scaling"))
                 {
                     // Logic to be implemented
+                    EditorUtility.DisplayDialog("Not Implemented", "Ghost Avatar generation is not yet implemented.", "OK");
                 }
             }
         }
@@ -363,6 +366,60 @@ namespace VRClothFitter
             EditorUtility.DisplayDialog("Success", $"Applied proportional scale to {appliedCount} bones and configured MA Merge Armature.", "OK");
         }
 
+        private void DetectHardPartCandidates()
+        {
+            var clothRenderer = clothObject.GetComponentInChildren<SkinnedMeshRenderer>();
+            if (clothRenderer == null || clothRenderer.sharedMesh == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Cloth object must have a SkinnedMeshRenderer with a mesh.", "OK");
+                return;
+            }
+
+            var mesh = clothRenderer.sharedMesh;
+            var boneWeights = mesh.boneWeights;
+            var materials = clothRenderer.sharedMaterials;
+            var candidateMaterialSet = new HashSet<Material>();
+
+            // Create a map of vertex index to submesh index (material index)
+            var vertexToSubmeshMap = new int[mesh.vertexCount];
+            int vertexIndex = 0;
+            for (int i = 0; i < mesh.subMeshCount; i++)
+            {
+                var submesh = mesh.GetSubMesh(i);
+                for (int j = 0; j < submesh.vertexCount; j++)
+                {
+                    // This mapping is not perfect but a decent approximation
+                    if (vertexIndex < mesh.vertexCount)
+                    {
+                        vertexToSubmeshMap[vertexIndex++] = i;
+                    }
+                }
+            }
+
+            for (int i = 0; i < boneWeights.Length; i++)
+            {
+                var weight = boneWeights[i];
+                // Check if the vertex is influenced by only one bone
+                if (weight.weight0 > 0.99f && weight.weight1 == 0 && weight.weight2 == 0 && weight.weight3 == 0)
+                {
+                    int submeshIndex = vertexToSubmeshMap[i];
+                    if (submeshIndex < materials.Length)
+                    {
+                        candidateMaterialSet.Add(materials[submeshIndex]);
+                    }
+                }
+            }
+
+            hardPartCandidateMaterials = candidateMaterialSet.ToList();
+            selectedHardMaterials.Clear();
+            foreach (var mat in hardPartCandidateMaterials)
+            {
+                selectedHardMaterials[mat] = true; // Select all by default
+            }
+            
+            EditorUtility.DisplayDialog("Detection Complete", $"{hardPartCandidateMaterials.Count} candidate materials for hard parts were found based on bone weights.", "OK");
+        }
+
         private Dictionary<string, float> CalculateAllBoneRadii(SkinnedMeshRenderer renderer)
         {
             var boneRadii = new Dictionary<string, float>();
@@ -441,7 +498,7 @@ namespace VRClothFitter
                 
                 string path = AssetDatabase.GetAssetPath(oldMat);
                 string dir = string.IsNullOrEmpty(path) ? "Assets" : Path.GetDirectoryName(path);
-                string newPath = AssetDatabase.GenerateUniqueAssetPath($"{dir}/{{newMat.name}}.mat");
+                string newPath = AssetDatabase.GenerateUniqueAssetPath($"{dir}/{newMat.name}.mat");
                 AssetDatabase.CreateAsset(newMat, newPath);
 
                 newMaterials[i] = newMat;
