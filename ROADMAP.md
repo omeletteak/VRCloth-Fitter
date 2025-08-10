@@ -18,17 +18,17 @@ This phase marks the definitive architecture, deeply integrating with Modular Av
 
 - [x] **UI/UX Overhaul**:
     - [x] Migrated to a modern, component-based workflow (`VRClothFitter` component and custom editor).
-- [ ] **Adopt `MergeArmatureHook` for Scaling**:
-    - [ ] Create a new component/script that implements `MergeArmatureHook`.
-    - [ ] This hook will read scale data from `VRClothFitterScalingData` at build time and apply it to the bones on-the-fly, ensuring a **completely non-destructive build**.
-- [ ] **Reinstate Data Component**:
-    - [ ] Re-introduce `VRClothFitterScalingData.cs` to store the calculated bone scale ratios as pure data, without modifying the prefab.
-- [ ] **Implement a "Destructive Preview" System**:
-    - [ ] Add "Start Preview" and "Stop Preview" buttons to the editor.
-    - [ ] "Start Preview" will temporarily apply the scales from the data component directly to the cloth prefab's bones for instant visual feedback.
-    - [ ] "Stop Preview" will revert the bones to their original scales, ensuring the prefab remains clean.
-- [ ] **Redefine "Calculate Scale" Feature**:
-    - [ ] Its role is now to calculate the proportional differences and **save the results to the `VRClothFitterScalingData` component**.
+- [x] **Adopt `MergeArmatureHook` for Scaling**:
+    - [x] Create a new component/script that implements `MergeArmatureHook`.
+    - [x] This hook will read scale data from `VRClothFitterScalingData` at build time and apply it to the bones on-the-fly, ensuring a **completely non-destructive build**.
+- [x] **Reinstate Data Component**:
+    - [x] Re-introduce `VRClothFitterScalingData.cs` to store the calculated bone scale ratios as pure data, without modifying the prefab.
+- [x] **Implement a "Destructive Preview" System**:
+    - [x] Add "Start Preview" and "Stop Preview" buttons to the editor.
+    - [x] "Start Preview" will temporarily apply the scales from the data component directly to the cloth prefab's bones for instant visual feedback.
+    - [x] "Stop Preview" will revert the bones to their original scales, ensuring the prefab remains clean.
+- [x] **Redefine "Calculate Scale" Feature**:
+    - [x] Its role is now to calculate the proportional differences and **save the results to the `VRClothFitterScalingData` component**.
 - [x] **Deprecate `Fit Bones` Feature**:
     - [x] Bone parenting is fully delegated to `MA Merge Armature`.
 
