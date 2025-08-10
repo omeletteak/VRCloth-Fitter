@@ -17,10 +17,16 @@
 # Otherwise, they should be committed.
 !/[Aa]ssets/**/*.meta
 
-# Folders for testing purposes
-/[Ss]cenes/
-/[Tt]est[Aa]vatars/
-/[Tt]est[Cc]loths/
+# Test assets
+/Assets/Scenes/
+/Assets/TestAvatars/
+/Assets/TestCloths/
+
+# Logs and temporary files
+/[Ee]ditor.log
+/[Ee]ditor.log.meta
+*.zip
+/vpm-listing-temp/
 
 # VPM packages / dependencies
 /Packages/com.vrchat.avatars/
