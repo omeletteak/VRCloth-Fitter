@@ -6,43 +6,50 @@ This document outlines the development plan and feature history for VRCloth-Fitt
 
 The goal of this tool is to provide a robust, intuitive suite of features for avatar outfit customization. Our core philosophy is to **avoid reinventing the wheel** by leveraging the powerful, industry-standard features of **Modular Avatar (MA)** wherever possible.
 
-VRCloth-Fitter's primary role is to act as an **intelligent setup utility** for MA components, providing advanced calculations and automation that MA itself does not offer, ensuring a seamless and non-destructive workflow for the user.
+VRCloth-Fitter's primary role is to act as an **intelligent setup utility** for MA components, providing advanced features that MA itself does not offer, ensuring a seamless and non-destructive workflow for the user.
 
-### Phase 1: Proof of Concept (Legacy)
+---
 
-- [x] **Initial Implementation**: Developed a standalone, window-based tool with custom NDMF passes for bone scaling and mesh deformation.
+### Phase 1 & 2: Legacy (Bone-Based Fitting)
 
-### Phase 2: Architectural Refactor - Deep Synergy with Modular Avatar (Final)
+- [x] **Initial Implementation**: Developed systems for proportional bone scaling and anchor-based mesh deformation.
+- [x] **Architectural Refactor**: Deeply integrated with Modular Avatar hooks for a non-destructive build process.
+- **Outcome**: While functional for bone scaling, the mesh deformation approach proved to be unstable and fundamentally flawed, often causing mesh shrinkage. This approach is now considered **deprecated**.
 
-This phase marks the definitive architecture, deeply integrating with Modular Avatar's extension points for a fully non-destructive build process, while providing immediate visual feedback via a temporary, destructive preview.
+---
 
-- [x] **UI/UX Overhaul**:
-    - [x] Migrated to a modern, component-based workflow (`VRClothFitter` component and custom editor).
-- [x] **Adopt `MergeArmatureHook` for Scaling**:
-    - [x] Create a new component/script that implements `MergeArmatureHook`.
-    - [x] This hook will read scale data from `VRClothFitterScalingData` at build time and apply it to the bones on-the-fly, ensuring a **completely non-destructive build**.
-- [x] **Reinstate Data Component**:
-    - [x] Re-introduce `VRClothFitterScalingData.cs` to store the calculated bone scale ratios as pure data, without modifying the prefab.
-- [x] **Implement a "Destructive Preview" System**:
-    - [x] Add "Start Preview" and "Stop Preview" buttons to the editor.
-    - [x] "Start Preview" will temporarily apply the scales from the data component directly to the cloth prefab's bones for instant visual feedback.
-    - [x] "Stop Preview" will revert the bones to their original scales, ensuring the prefab remains clean.
-- [x] **Redefine "Calculate Scale" Feature**:
-    - [x] Its role is now to calculate the proportional differences and **save the results to the `VRClothFitterScalingData` component**.
-- [x] **Deprecate `Fit Bones` Feature**:
-    - [x] Bone parenting is fully delegated to `MA Merge Armature`.
+## Phase 3: The New Foundation - Cage-Based Deformation
 
-### Phase 3: Advanced Fitting Features
+This phase marks a complete overhaul of the fitting strategy, moving away from programmatic deformation to a user-driven, interactive approach. The goal is to provide a tool that solves the problem of **body shape differences**, which `MA Merge Armature` does not handle.
 
-- [x] **Advanced Mesh Deformation**
-- [x] **Blendshape Sync Helper**
-- [x] **Material & Shader Utility**
+- [ ] **Core Feature: Cage (Lattice) Deformation**
+    - [ ] **Cage Generation**: Implement a feature to automatically generate a simple, configurable cage (e.g., a 3x3x3 lattice) around the target cloth mesh.
+    - [ ] **Interactive Manipulation**: In the Scene View, allow the user to select and move the control points of the cage.
+    - [ ] **Real-time Mesh Deformation**: As the user manipulates the cage, the enclosed cloth mesh deforms smoothly in real-time. The core logic will be based on Free-Form Deformation (FFD) or similar lattice-based algorithms.
+    - [ ] **Non-destructive Workflow**: All edits will be performed on a temporary mesh instance.
 
-### Phase 4: Community & Future Features
+- [ ] **Core Feature: Blend Shape Export**
+    - [ ] Implement a function to save the result of the cage deformation as a new **Blend Shape** on the original mesh.
+    - [ ] This ensures the entire process is non-destructive and integrates perfectly with Unity's standard features and other tools like Modular Avatar.
 
-- [x] **Preset Import/Export**
-- [ ] **Improve Preset System with GUIDs**
-- [ ] **Enhance Proportional Scaling with Multi-Mode System** (High-Precision, Ghost Avatar)
+- [ ] **New Component-Based UI/UX**
+    - [ ] Create a new `VRClothFitterCageDeformer` MonoBehaviour.
+    - [ ] Design a custom editor for this component to manage cage generation, editing state (start/stop editing), and saving to a blend shape.
+    - [ ] Deprecate the old `VRClothFitterDeformationData` and its related systems.
+
+## Phase 4: Usability and Refinements
+
+- [ ] **UX Enhancements**:
+    - [ ] Improve the visual feedback in the Scene View (e.g., clearer handles, cage visualization).
+    - [ ] Add features like cage subdivision levels and reset functionality.
+- [ ] **Integration & Documentation**:
+    - [ ] Create detailed documentation and tutorials explaining the new workflow, especially how it complements Modular Avatar.
+    - [ ] Ensure the blend shapes created by the tool are correctly handled by MA's build process.
+
+## Phase 5: Future Possibilities
+
+- [ ] **Projection-Based Tools**: Explore adding simple projection tools (e.g., "Shrinkwrap" or "Conform") for handling minor clipping issues after cage deformation.
+- [ ] **Symmetry Editing**: Add an option to edit the cage symmetrically.
 
 ---
 
