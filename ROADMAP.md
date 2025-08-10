@@ -61,6 +61,10 @@ This is the core feature, aiming to directly modify the clothing mesh to fit the
     - [x] Implement functionality to export scaling (Phase 1) and mesh deformation (Phase 2) data as JSON files.
     - [x] Include metadata such as the target avatar and cloth names in the JSON file.
     - [x] Implement functionality to import JSON preset files and restore the data to the corresponding components.
+- [ ] **Improve Preset System with GUIDs**:
+    - [ ] Store the source avatar's Prefab GUID in the exported preset file.
+    - [ ] On import, search the project for a matching GUID to automatically detect the target avatar.
+    - [ ] Implement a fallback to search by avatar name if no matching GUID is found.
 
 ---
 
