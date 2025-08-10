@@ -19,9 +19,13 @@
 
 # Test assets
 /Assets/Scenes/
+/Assets/Scenes.meta
 /Assets/TestAvatars/
+/Assets/TestAvatars.meta
 /Assets/TestCloths/
+/Assets/TestCloths.meta
 /Assets/XR/
+/Assets/XR.meta
 
 # Logs and temporary files
 /[Ee]ditor.log
