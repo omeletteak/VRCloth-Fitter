@@ -283,7 +283,7 @@ public class VRClothFitterWindow : EditorWindow
         }
         Undo.RecordObject(syncComponent, "Apply Blendshape Sync");
 
-        syncComponent.syncs.Clear();
+        syncComponent.bindings.Clear();
 
         for (int i = 0; i < clothBlendshapeNames.Count; i++)
         {
@@ -293,7 +293,7 @@ public class VRClothFitterWindow : EditorWindow
                 string clothBsName = clothBlendshapeNames[i];
                 string avatarBsName = avatarBlendshapeNamesArray[selectedIndex];
                 
-                syncComponent.syncs.Add(new BlendshapeBinding
+                syncComponent.bindings.Add(new BlendshapeBinding
                 {
                     sourceBlendshape = avatarBsName,
                     targetBlendshape = clothBsName
@@ -301,7 +301,7 @@ public class VRClothFitterWindow : EditorWindow
             }
         }
         
-        EditorUtility.DisplayDialog("Success", $"Applied {syncComponent.syncs.Count} blendshape sync rules.", "OK");
+        EditorUtility.DisplayDialog("Success", $"Applied {syncComponent.bindings.Count} blendshape sync rules.", "OK");
     }
 
     private bool GetRenderers(out SkinnedMeshRenderer avatarRenderer, out SkinnedMeshRenderer clothRenderer)
