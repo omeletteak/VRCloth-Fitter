@@ -274,7 +274,10 @@ public class VRClothFitterWindow : EditorWindow
 
     private void ApplyBlendshapeSync()
     {
-        if (clothObject == null) return;
+        if (clothObject == null || avatarObject == null) return;
+
+        var avatarRenderer = avatarObject.GetComponentInChildren<SkinnedMeshRenderer>();
+        if (avatarRenderer == null) return;
 
         var syncComponent = clothObject.GetComponent<ModularAvatarBlendshapeSync>();
         if (syncComponent == null)
@@ -284,6 +287,8 @@ public class VRClothFitterWindow : EditorWindow
         Undo.RecordObject(syncComponent, "Apply Blendshape Sync");
 
         syncComponent.Bindings.Clear();
+        
+        var avatarRef = new AvatarObjectReference(avatarRenderer);
 
         for (int i = 0; i < clothBlendshapeNames.Count; i++)
         {
@@ -295,8 +300,9 @@ public class VRClothFitterWindow : EditorWindow
                 
                 syncComponent.Bindings.Add(new BlendshapeBinding
                 {
-                    sourceBlendshape = avatarBsName,
-                    targetBlendshape = clothBsName
+                    ReferenceMesh = avatarRef,
+                    Blendshape = avatarBsName,
+                    LocalBlendshape = clothBsName
                 });
             }
         }
