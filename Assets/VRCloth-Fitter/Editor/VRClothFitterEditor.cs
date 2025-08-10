@@ -85,7 +85,6 @@ namespace VRClothFitter
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(serializedObject.FindProperty("targetAvatarObject"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("sourceAvatarObject"));
             
             if (EditorGUI.EndChangeCheck())
             {
@@ -115,11 +114,21 @@ namespace VRClothFitter
         private void DrawProportionalScalingUI()
         {
             GUILayout.Label("Proportional Scaling", boldLabelStyle);
-            
-            string helpText = fitter.sourceAvatarObject == null 
-                ? "Mode: Fallback. Compares Target Avatar to the cloth's bones."
-                : "Mode: High-Precision. Compares Source and Target avatars directly.";
+
+            serializedObject.FindProperty("fittingMode").enumValueIndex = (int)(FittingMode)EditorGUILayout.EnumPopup("Fitting Mode", fitter.fittingMode);
+
+            string helpText;
+            if (fitter.fittingMode == FittingMode.HighPrecision)
+            {
+                helpText = "Compares Source and Target avatars directly for the most accurate results. Requires the original avatar the cloth was made for.";
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("sourceAvatarObject"));
+            }
+            else // Fallback mode
+            {
+                helpText = "Compares the cloth's own armature against the Target Avatar. Use this if you don't have the original source avatar.";
+            }
             EditorGUILayout.HelpBox(helpText, MessageType.Info);
+
 
             if (GUILayout.Button("Calculate & Save Scale Data"))
             {
