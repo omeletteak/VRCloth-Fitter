@@ -32,11 +32,10 @@ This phase marks a fundamental shift in architecture to deeply integrate with Mo
 
 ### Phase 3: Advanced Fitting Features
 
-- [ ] **Enhance Proportional Scaling with High-Precision Mode**:
-    - [ ] Add an optional "Source Avatar" field to the `VRClothFitter` component.
-    - [ ] If the "Source Avatar" is provided, the "Calculate Scale" logic will switch to a high-precision mode.
-    - [ ] This mode calculates the **true proportional difference** by directly comparing the **Source Avatar** and the **Target Avatar**.
-    - [ ] The resulting "true" scale difference is then applied to the cloth's bones, achieving unparalleled fitting accuracy.
+- [ ] **Enhance Proportional Scaling with Multi-Mode System**:
+    - [ ] **High-Precision Mode**: Add an optional "Source Avatar" field. If provided, the tool calculates the **true proportional difference** by directly comparing the source and target avatars for maximum accuracy.
+    - [ ] **Ghost Avatar Estimation Mode**: If the source avatar is not provided, implement a new feature to **estimate the source avatar's body shape**. This works by moving the cloth vertices inwards along their normals, creating a "ghost" mesh that approximates the original body. This ghost is then used for a highly accurate comparison.
+    - [ ] **Fallback Mode**: As a simple alternative, continue to support direct comparison between the target avatar's bones and the cloth's bones.
 
 These features provide value beyond what Modular Avatar offers natively.
 
