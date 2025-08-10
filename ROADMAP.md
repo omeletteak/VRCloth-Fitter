@@ -34,7 +34,12 @@ This phase marks a fundamental shift in architecture to deeply integrate with Mo
 
 - [ ] **Enhance Proportional Scaling with Multi-Mode System**:
     - [x] **High-Precision Mode**: Add an optional "Source Avatar" field. If provided, the tool calculates the **true proportional difference** by directly comparing the source and target avatars for maximum accuracy.
-    - [ ] **Ghost Avatar Estimation Mode**: If the source avatar is not provided, implement a new feature to **estimate the source avatar's body shape**. This works by moving the cloth vertices inwards along their normals, creating a "ghost" mesh that approximates the original body. This ghost is then used for a highly accurate comparison.
+    - [ ] **Ghost Avatar Estimation Mode**: If the source avatar is not provided, implement a new feature to **estimate the source avatar's body shape**.
+    - [ ] **Identify Hard Parts**: Implement a hybrid system to distinguish rigid parts (e.g., buckles, armor) from soft cloth.
+        - [ ] **Step 1 (Auto-Detect)**: Automatically identify vertex groups that are weighted 100% to a single bone, as these are likely rigid.
+        - [ ] **Step 2 (User Confirmation)**: Present the materials used by these candidate groups to the user, allowing them to confirm which ones are actually hard surfaces.
+    - [ ] **Generate Ghost Mesh**: Create a "ghost" mesh by moving the vertices of soft parts inwards along their normals. Vertices belonging to confirmed hard parts will not be moved.
+    - [ ] This ghost is then used for a highly accurate comparison.
     - [ ] **Fallback Mode**: As a simple alternative, continue to support direct comparison between the target avatar's bones and the cloth's bones.
 
 These features provide value beyond what Modular Avatar offers natively.
