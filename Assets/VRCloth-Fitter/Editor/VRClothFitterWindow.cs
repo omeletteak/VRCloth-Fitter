@@ -288,7 +288,7 @@ public class VRClothFitterWindow : EditorWindow
 
         syncComponent.Bindings.Clear();
         
-        var avatarRef = new AvatarObjectReference(avatarRenderer);
+        var avatarRef = AvatarObjectReference.FromObject(avatarRenderer.gameObject, syncComponent);
 
         for (int i = 0; i < clothBlendshapeNames.Count; i++)
         {
