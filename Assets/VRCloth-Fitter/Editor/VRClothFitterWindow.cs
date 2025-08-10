@@ -286,9 +286,13 @@ public class VRClothFitterWindow : EditorWindow
         }
         Undo.RecordObject(syncComponent, "Apply Blendshape Sync");
 
+        // This is the correct property according to the source code.
+        // It seems the API has changed over time.
+        // We set the reference mesh directly on the component.
+        syncComponent.ReferenceMesh = new AvatarObjectReference(avatarRenderer);
+
+        // The list of bindings is now a simple string-to-string map.
         syncComponent.Bindings.Clear();
-        
-        var avatarRef = AvatarObjectReference.FromObject(avatarRenderer.gameObject, syncComponent);
 
         for (int i = 0; i < clothBlendshapeNames.Count; i++)
         {
@@ -298,9 +302,9 @@ public class VRClothFitterWindow : EditorWindow
                 string clothBsName = clothBlendshapeNames[i];
                 string avatarBsName = avatarBlendshapeNamesArray[selectedIndex];
                 
+                // The BlendshapeBinding struct is simpler now.
                 syncComponent.Bindings.Add(new BlendshapeBinding
                 {
-                    ReferenceMesh = avatarRef,
                     Blendshape = avatarBsName,
                     LocalBlendshape = clothBsName
                 });
