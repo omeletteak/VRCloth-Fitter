@@ -1,10 +1,13 @@
 using UnityEngine;
 
-public static class VRClothProxyGenerator
+namespace VRClothFitter
 {
-    public static void Generate()
+    public static class VRClothProxyGenerator
     {
-        Debug.Log("[VRClothFitter] Generating capsule proxy...");
-        // 実装：ボーンからカプセルコライダーを生成（現状はダミー）
+        public static void Generate()
+        {
+            Debug.Log("[VRClothFitter] Generating capsule proxy...");
+            // 実装：ボーンからカプセルコライダーを生成（現状はダミー）
+        }
     }
 }

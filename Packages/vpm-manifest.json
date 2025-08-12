@@ -25,11 +25,11 @@
       }
     },
     "jp.lilxyzw.liltoon": {
-      "version": "2.1.7",
+      "version": "2.1.8",
       "dependencies": {}
     },
     "nadena.dev.modular-avatar": {
-      "version": "1.13.1",
+      "version": "1.13.2",
       "dependencies": {
         "com.vrchat.avatars": ">=3.7.4",
         "nadena.dev.ndmf": ">=1.8.0 <2.0.0-a"

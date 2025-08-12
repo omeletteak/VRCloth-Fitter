@@ -1,8 +1,11 @@
 using UnityEngine;
 
-[System.Serializable]
-public class VRClothDiffMap
+namespace VRClothFitter
 {
-    public string metadata;
-    public Vector3[] vertexOffsets; // 頂点の変位量（ダミー）
+    [System.Serializable]
+    public class VRClothDiffMap
+    {
+        public string metadata;
+        public Vector3[] vertexOffsets; // 頂点の変位量（ダミー）
+    }
 }

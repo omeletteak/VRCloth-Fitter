@@ -1,10 +1,13 @@
 using UnityEngine;
 
-public static class VRClothLaplacian
+namespace VRClothFitter
 {
-    public static void Smooth()
+    public static class VRClothLaplacian
     {
-        Debug.Log("[VRClothFitter] Running Laplacian smoothing (dummy)...");
-        // 実装：ラプラシアン平滑化アルゴリズム
+        public static void Smooth()
+        {
+            Debug.Log("[VRClothFitter] Running Laplacian smoothing (dummy)...");
+            // 実装：ラプラシアン平滑化アルゴリズム
+        }
     }
 }

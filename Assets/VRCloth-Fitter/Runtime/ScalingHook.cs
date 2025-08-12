@@ -1,3 +1,4 @@
+///
 using UnityEngine;
 using nadena.dev.ndmf;
 using VRC.SDKBase;
@@ -49,3 +50,4 @@ namespace VRClothFitter
         }
     }
 }
+///
