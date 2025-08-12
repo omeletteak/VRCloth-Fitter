@@ -21,7 +21,7 @@ namespace VRClothFitter
             }
 
             // TODO: 実際の処理にfitter.targetAvatarとfitter.clothToDeformを渡すように修正
-            VRClothProxyGenerator.Generate();
+            VRClothProxyGenerator.Generate(fitter.targetAvatar);
             var penetrations = VRClothPenetrationDetector.Detect();
             Debug.Log($"Detected {penetrations} penetrations.");
 
