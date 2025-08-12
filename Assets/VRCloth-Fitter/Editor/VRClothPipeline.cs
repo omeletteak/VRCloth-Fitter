@@ -24,7 +24,7 @@ public static class VRClothPipeline
         for (int i = 0; i < diff.vertexOffsets.Length; i++)
             diff.vertexOffsets[i] = Random.insideUnitSphere * 0.001f; // 微小な変位
 
-        VRClothDiffApplier.SaveDiff(diff);
+        // VRClothDiffApplier.SaveDiff(diff); // キャッシュ機能は未実装のため、一時的に無効化
 
         Debug.Log("[VRClothFitter] Process complete.");
     }
