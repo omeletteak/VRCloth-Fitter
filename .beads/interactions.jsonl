@@ -1,1 +1,3 @@
 {"id":"int-1f73cd36","kind":"field_change","created_at":"2026-06-11T12:01:35.8823303Z","actor":"omelette_ak","issue_id":"VRCloth-Fitter-vz0","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"bd init時のプレースホルダ。実issueはMVP起票(2026-06-11)で置換"}}
+{"id":"int-5007538c","kind":"field_change","created_at":"2026-06-11T12:21:15.8924159Z","actor":"omelette_ak","issue_id":"VRCloth-Fitter-w2t","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"DB分裂診断用のセンチネル。役目終了"}}
+{"id":"int-73bce2c2","kind":"field_change","created_at":"2026-06-11T12:37:20.2027534Z","actor":"omelette_ak","issue_id":"VRCloth-Fitter-a8b","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"実装+EditModeテスト10件全合格(Unity 2022.3.22f1バッチ実行で検証済み)"}}
