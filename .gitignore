@@ -82,3 +82,12 @@ crash.log
 .dolt/
 *.db
 .beads-credential-key
+
+# VPM-managed packages — restore with VCC or `vrc-get resolve`.
+# Only the manifests at Packages/ root stay tracked; the package
+# contents (VRChat SDK etc.) must never be committed (redistribution
+# is prohibited by their licenses).
+/Packages/*/
+
+# Unity editor log accidentally committed at the root
+/Editor.log
