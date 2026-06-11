@@ -1,56 +1,61 @@
-# VRCloth-Fitter Development Roadmap
+# VRCloth-Fitter ロードマップ
 
-This document outlines the development plan and feature history for VRCloth-Fitter.
+このドキュメントは VRCloth-Fitter の開発計画を示します。背景にある設計判断と競合分析は [docs/DESIGN.md](docs/DESIGN.md) を参照してください。
 
-## Core Philosophy
+## 基本理念
 
-The goal of this tool is to provide a robust, intuitive suite of features for avatar outfit customization. Our core philosophy is to **avoid reinventing the wheel** by leveraging the powerful, industry-standard features of **Modular Avatar (MA)** wherever possible.
+- **貫通修正に特化する** — 衣装の体型変換(リターゲティング)は先行ツールの領分。本プロジェクトは「着せた後に残る貫通の自動修正」という、誰も埋めていない後段を担う
+- **No Cache** — アバター素体形状を復元しうるデータを保存・出力しない。形状由来の中間データはその場で計算し、その場で捨てる
+- **Modular Avatar / NDMF エコシステムとの互換** — Merge Armature による骨格揃えを前提とし、非破壊ワークフローを徹底する
+- **MIT ライセンスのオープンソース** — 上記の約束(特に No Cache)をコードで検証可能にする
 
-VRCloth-Fitter's primary role is to act as an **intelligent setup utility** for MA components, providing advanced features that MA itself does not offer, ensuring a seamless and non-destructive workflow for the user.
+## フェーズ1: 貫通修正コア MVP(進行中)
+
+- [x] **プロキシボディ生成** — Humanoid ボーンからカプセル列を自動生成
+- [x] **カプセル距離計算** — 最近接点・符号付き距離・押し出し先の計算(EditMode テスト付き)
+- [x] **シーンビュー可視化** — カプセルのワイヤ表示と、侵入頂点の深度ヒートマップ表示
+- [ ] **パイプラインの実メッシュ配線** — 衣装 SkinnedMeshRenderer の頂点をワールド座標で取得
+- [ ] **貫通検出** — 全頂点×全カプセルの符号付き距離から侵入頂点をマーク
+- [ ] **押し出し** — 侵入頂点をカプセル表面+マージンへ移動
+- [ ] **ラプラシアン平滑化** — 修正領域限定で押し出しの段差を馴染ませる(再侵入は再押し出し)
+- [ ] **非破壊適用** — メッシュ複製への書き戻し(元アセット不変、Undo 対応)
+- [ ] **E2E 検証** — 実アバター+衣装で貫通解消を確認
+
+## フェーズ2: 公開
+
+- [x] リポジトリから VRChat SDK 等の再配布禁止物を除去(履歴含む)
+- [x] LICENSE(MIT)とドキュメント整備
+- [ ] リポジトリの public 化
+- [ ] Runtime/Editor の asmdef 整備と VPM パッケージ化
+- [ ] VPM リポジトリ(vpm-listing)での配布
+
+## フェーズ3: 品質向上
+
+- [ ] **カプセル半径の自動推定** — 素体メッシュから半径を推定(現状はハードコード)
+- [ ] **シェイプキー・ポーズ対応** — 代表ポーズ/シェイプキーでの貫通もまとめて修正
+- [ ] **マスクペイント** — 修正したくない部位の除外
+- [ ] **Before/After 比較** — 修正結果の確認 UI
+
+## フェーズ4: 拡張(将来)
+
+- [ ] **高品質モード** — 局所 ARAP 等による、より自然な変形
+- [ ] **FFD ケージ編集** — 手動微調整とブレンドシェイプ保存
+- [ ] **ローカル完結フィット** — 変換元アバターも所持している前提の体型変換(No Cache と両立する唯一の形)。ただし先行ツール Alterith が同方式を実現済みのため優先度は低い
+
+## 凍結: 差分キャッシュの保存・共有
+
+旧ロードマップにあった「差分キャッシュの保存・再利用」「体型差分プリセットの共有」(旧 FUTURE_PLANS.md の構想を含む)は**凍結**します。
+
+- 体型差分の共有という構想自体は、先行ツール「もちふぃった～」が変換プロファイルとして製品化済み
+- そして当プロジェクトの調査で、この種の差分データは**元アバターの素体形状を実質的に丸ごと含んでしまう**ことを確認した(詳細は [docs/DESIGN.md](docs/DESIGN.md))
+- 量子化やノイズ付加による「安全化」も検討したが、安全性を保証する形式の議論が固まらない限り実装しない。これが No Cache 原則の由来
+
+## 経緯(旧世代の記録)
+
+- **第1世代(ボーンベースフィッティング)**: ボーンスケーリングとアンカー式メッシュ変形を実装したが、メッシュ変形はメッシュ縮みが頻発し設計として破綻、廃止
+- **第2世代(ケージ変形構想)**: FFD ケージによる手動変形を構想(フェーズ4に縮小して継承)
+- **第3世代(現行)**: 「本質は Merge Armature 後の貫通修正」と再定義し、貫通検出→押し出し→平滑化のパイプラインに一本化
 
 ---
 
-### Phase 1 & 2: Legacy (Bone-Based Fitting)
-
-- [x] **Initial Implementation**: Developed systems for proportional bone scaling and anchor-based mesh deformation.
-- [x] **Architectural Refactor**: Deeply integrated with Modular Avatar hooks for a non-destructive build process.
-- **Outcome**: While functional for bone scaling, the mesh deformation approach proved to be unstable and fundamentally flawed, often causing mesh shrinkage. This approach is now considered **deprecated**.
-
----
-
-## Phase 3: The New Foundation - Cage-Based Deformation
-
-This phase marks a complete overhaul of the fitting strategy, moving away from programmatic deformation to a user-driven, interactive approach. The goal is to provide a tool that solves the problem of **body shape differences**, which `MA Merge Armature` does not handle.
-
-- [ ] **Core Feature: Cage (Lattice) Deformation**
-    - [ ] **Cage Generation**: Implement a feature to automatically generate a simple, configurable cage (e.g., a 3x3x3 lattice) around the target cloth mesh.
-    - [ ] **Interactive Manipulation**: In the Scene View, allow the user to select and move the control points of the cage.
-    - [ ] **Real-time Mesh Deformation**: As the user manipulates the cage, the enclosed cloth mesh deforms smoothly in real-time. The core logic will be based on Free-Form Deformation (FFD) or similar lattice-based algorithms.
-    - [ ] **Non-destructive Workflow**: All edits will be performed on a temporary mesh instance.
-
-- [ ] **Core Feature: Blend Shape Export**
-    - [ ] Implement a function to save the result of the cage deformation as a new **Blend Shape** on the original mesh.
-    - [ ] This ensures the entire process is non-destructive and integrates perfectly with Unity's standard features and other tools like Modular Avatar.
-
-- [ ] **New Component-Based UI/UX**
-    - [ ] Create a new `VRClothFitterCageDeformer` MonoBehaviour.
-    - [ ] Design a custom editor for this component to manage cage generation, editing state (start/stop editing), and saving to a blend shape.
-    - [ ] Deprecate the old `VRClothFitterDeformationData` and its related systems.
-
-## Phase 4: Usability and Refinements
-
-- [ ] **UX Enhancements**:
-    - [ ] Improve the visual feedback in the Scene View (e.g., clearer handles, cage visualization).
-    - [ ] Add features like cage subdivision levels and reset functionality.
-- [ ] **Integration & Documentation**:
-    - [ ] Create detailed documentation and tutorials explaining the new workflow, especially how it complements Modular Avatar.
-    - [ ] Ensure the blend shapes created by the tool are correctly handled by MA's build process.
-
-## Phase 5: Future Possibilities
-
-- [ ] **Projection-Based Tools**: Explore adding simple projection tools (e.g., "Shrinkwrap" or "Conform") for handling minor clipping issues after cage deformation.
-- [ ] **Symmetry Editing**: Add an option to edit the cage symmetrically.
-
----
-
-*This roadmap is subject to change based on community feedback and development progress.*
+*このロードマップは開発の進行とフィードバックに応じて更新されます。*

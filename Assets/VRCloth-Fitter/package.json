@@ -10,5 +10,6 @@
   "vpmDependencies": {
     "nadena.dev.ndmf": ">=1.0.0",
     "nadena.dev.modular-avatar": ">=1.0.0"
-  }
+  },
+  "license": "MIT"
 }

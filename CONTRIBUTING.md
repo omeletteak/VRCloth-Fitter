@@ -24,8 +24,12 @@ Please follow the existing coding style for consistency. Key points include:
 
 ## Project Structure
 
+-   **`/Assets/VRCloth-Fitter/Core`**: Pure C# math and data types (e.g., `BodyCapsule`, `PenetrationHit`) with no scene dependencies. Covered by EditMode tests.
 -   **`/Assets/VRCloth-Fitter/Runtime`**: Contains `MonoBehaviour` components that are attached to GameObjects (e.g., `VRClothFitter.cs`). These hold the data.
--   **`/Assets/VRCloth-Fitter/Editor`**: Contains `Editor` scripts that define the custom inspectors and logic for the runtime components (e.g., `VRClothFitterEditor.cs`).
--   **NDMF Passes (`*Pass.cs`)**: These files in the `Editor` directory contain the core non-destructive logic that runs during the avatar build process, managed by NDMF.
+-   **`/Assets/VRCloth-Fitter/Editor`**: Contains `Editor` scripts: custom inspectors, the fitting pipeline, and scene-view visualization.
+-   **`/Assets/VRCloth-Fitter/Tests`**: EditMode tests.
+-   **`/Assets/VRCloth-Fitter/Scripts`**: Miscellaneous scripts pending reorganization into the folders above.
+
+See [docs/DESIGN.md](docs/DESIGN.md) for the design rationale — in particular the **No Cache** principle (never persist or export data that could reconstruct an avatar's body shape), which all contributions must respect.
 
 We look forward to your contributions!
