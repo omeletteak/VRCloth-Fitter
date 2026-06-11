@@ -1,0 +1,1 @@
+{"id":"int-1f73cd36","kind":"field_change","created_at":"2026-06-11T12:01:35.8823303Z","actor":"omelette_ak","issue_id":"VRCloth-Fitter-vz0","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"bd init時のプレースホルダ。実issueはMVP起票(2026-06-11)で置換"}}
