@@ -1,4 +1,4 @@
 repos:
   primary: "."
-  additional:
-    - "C:\\Users\\omelette_ak\\.beads-planning"
+
+dolt.auto-commit: "on"
