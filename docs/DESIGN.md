@@ -78,7 +78,8 @@ VRCloth-Fitter はここを自動化します。**どの方法で着せたかは
 ## 7. 配布形態と開発環境
 
 - 配布単位は `Assets/VRCloth-Fitter/` フォルダ(VPM パッケージ)。**リポジトリ全体を他プロジェクトへコピーしてはいけません**(VRChat SDK が二重になる)
-- リポジトリは SDK 等の再配布禁止物を含みません(git 履歴からも除去済み)。クローン後は `vrc-get resolve` か VCC で依存を復元
+- 配布は標準 VPM リポジトリ形式を予定。日本語圏では VCC 代替の [ALCOM](https://vrc-get.anatawa12.com/ja/alcom/)(vrc-get ベース)が主流だが、ALCOM と VCC は VPM リポジトリ設定を共有するため、同一の配布で両方の利用者に対応できる
+- リポジトリは SDK 等の再配布禁止物を含みません(git 履歴からも除去済み)。クローン後は `vrc-get resolve` か ALCOM / VCC で依存を復元
 - 別プロジェクトでのテストはジャンクション推奨: `New-Item -ItemType Junction -Path <テスト側>/Assets/VRCloth-Fitter -Target <クローン側>/Assets/VRCloth-Fitter`
 - 将来の VPM 配布には Runtime/Editor の asmdef 整備が必要(パッケージ内の asmdef なしコードはコンパイルされないため)。それまでは Assets 内設置のみサポート
 

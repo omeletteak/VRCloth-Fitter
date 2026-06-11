@@ -27,7 +27,7 @@
 - [x] LICENSE(MIT)とドキュメント整備
 - [ ] リポジトリの public 化
 - [ ] Runtime/Editor の asmdef 整備と VPM パッケージ化
-- [ ] VPM リポジトリ(vpm-listing)での配布
+- [ ] VPM リポジトリ(vpm-listing)での配布 — ALCOM / VCC どちらからも追加できる標準 VPM 形式(両者はリポジトリ設定を共有)
 
 ## フェーズ3: 品質向上
 

@@ -49,7 +49,7 @@ Modular Avatar の Merge Armature(Setup Outfit)で衣装を着せても、体型
 ## 動作環境
 
 - Unity **2022.3.22f1**(VRChat 推奨バージョン)
-- VRChat Creator Companion(VCC)プロジェクト
+- [ALCOM](https://vrc-get.anatawa12.com/ja/alcom/) または VRChat Creator Companion(VCC)で管理された VPM プロジェクト
 - [NDMF](https://github.com/bdunderscore/ndmf) / [Modular Avatar](https://modular-avatar.nadena.dev/)
 
 ## 試してみる(開発者向け)
@@ -59,10 +59,10 @@ Modular Avatar の Merge Armature(Setup Outfit)で衣装を着せても、体型
 ```powershell
 git clone https://github.com/omeletteak/VRCloth-Fitter.git
 cd VRCloth-Fitter
-vrc-get resolve   # または VCC で開いて依存解決(VRChat SDK 等は同梱していません)
+vrc-get resolve   # または ALCOM / VCC で開いて依存解決(VRChat SDK 等は同梱していません)
 ```
 
-別の VCC プロジェクトで試す場合は、パッケージフォルダだけをジャンクションでリンクします(リポジトリ全体をコピーしないでください — SDK が二重になります):
+別の VPM プロジェクトで試す場合は、パッケージフォルダだけをジャンクションでリンクします(リポジトリ全体をコピーしないでください — SDK が二重になります):
 
 ```powershell
 New-Item -ItemType Junction `

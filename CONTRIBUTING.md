@@ -5,7 +5,7 @@ Thank you for your interest in contributing to VRCloth-Fitter! We welcome bug re
 ## Development Environment Setup
 
 1.  **Unity Version**: This project is developed with Unity `2022.3.22f1`. Please use the same version to ensure compatibility.
-2.  **Required Packages**: Make sure you have the following packages installed in your project, preferably via the VRChat Creator Companion:
+2.  **Required Packages**: Make sure you have the following packages installed in your project, preferably via [ALCOM](https://vrc-get.anatawa12.com/alcom/) or the VRChat Creator Companion (VCC):
     - `nadena.dev.ndmf`
     - `nadena.dev.modular-avatar`
 
