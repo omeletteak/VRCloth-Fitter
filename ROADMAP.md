@@ -26,8 +26,8 @@
 
 - [x] リポジトリから VRChat SDK 等の再配布禁止物を除去(履歴含む)
 - [x] LICENSE(MIT)とドキュメント整備
-- [ ] 公開前レビュー — docs 全体のトーン(競合言及が事実ベースか)と `.beads/issues.jsonl` のノート内容を確認([docs/INFORMATION_ARCHITECTURE.md](docs/INFORMATION_ARCHITECTURE.md) §6 の規律で)
-- [ ] リポジトリの public 化
+- [x] リポジトリの public 化(完了済みだったが bd の表示不具合で未完了扱いになっていた — bd: 4ea は closed)
+- [x] 公開内容レビュー — docs 全体のトーン(競合言及が事実ベースか)と `.beads/issues.jsonl` のノート内容を [docs/INFORMATION_ARCHITECTURE.md](docs/INFORMATION_ARCHITECTURE.md) §6 の規律で確認(2026-06-13 実施、問題なし)
 - [x] Runtime/Editor の asmdef 整備(Core / Runtime / Editor / Tests.Editor の4アセンブリ構成)
 - [ ] VPM パッケージ化(VRClothFitter コンポーネントの IEditorOnly 化を含む)
 - [ ] VPM リポジトリ(vpm-listing)での配布 — ALCOM / VCC どちらからも追加できる標準 VPM 形式(両者はリポジトリ設定を共有)
