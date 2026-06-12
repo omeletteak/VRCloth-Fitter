@@ -82,4 +82,4 @@ VRChat アバター衣装の貫通自動修正を行う Unity エディタ拡張
 - **No Cache 原則** — アバター素体形状を復元しうる中間データを保存・出力しない。`ClothSnapshot` はメモリ内のみ、フィット結果のメッシュ複製もアセット化しない(シーン内完結)
 - `Assets/` 配下の `.meta` ファイルは必ずコミットに含める
 - コミットメッセージは `feat(fitting): 日本語要約 (bd-issue-id)` 形式
-- タスク管理は bd(beads)。ただし `bd create` は現在使用禁止(DB分裂の経緯あり)— 新規タスクは ROADMAP.md か既存 issue の notes へ
+- タスク管理は bd(beads)。ただし `bd create` は現在使用禁止(DB分裂の経緯あり。2026-06-12 に再試行して再現確認: create/show は成功表示でも stats・JSONLエクスポート・dep add から不可視)— 新規タスクは ROADMAP.md か既存 issue の notes へ
