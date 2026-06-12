@@ -22,6 +22,9 @@ namespace VRClothFitter
         [Range(0f, 0.05f)]
         public float margin = 0.005f;
 
+        [Tooltip("Apply the fit even when the preflight diagnostic judges the body-shape difference out of the supported range (RED). Results will look wrong — this tool corrects penetration, it does not retarget garments. See docs/DESIGN.md §9.")]
+        public bool forceApplyOutOfRange = false;
+
         private void Reset()
         {
             AutoDetectComponents();

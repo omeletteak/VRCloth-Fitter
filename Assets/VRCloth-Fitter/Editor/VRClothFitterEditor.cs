@@ -52,6 +52,11 @@ namespace VRClothFitter
                 new GUIContent("Margin (m)", "Clearance kept between the body surface and the cloth."),
                 fitter.margin, 0f, 0.05f);
 
+            fitter.forceApplyOutOfRange = EditorGUILayout.Toggle(
+                new GUIContent("Force Apply (Out of Range)",
+                    "Apply even when the preflight diagnostic judges RED (body-shape difference beyond the supported range). Results will look wrong; see docs/DESIGN.md §9."),
+                fitter.forceApplyOutOfRange);
+
             if (EditorGUI.EndChangeCheck())
             {
                 EditorUtility.SetDirty(fitter);
