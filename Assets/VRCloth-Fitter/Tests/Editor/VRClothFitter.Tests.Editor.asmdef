@@ -3,6 +3,8 @@
     "rootNamespace": "",
     "references": [
         "VRClothFitter.Core",
+        "VRClothFitter.Runtime",
+        "VRClothFitter.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
