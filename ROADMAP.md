@@ -1,6 +1,6 @@
 # VRCloth-Fitter ロードマップ
 
-このドキュメントは VRCloth-Fitter の開発計画を示します。背景にある設計判断と競合分析は [docs/DESIGN.md](docs/DESIGN.md) を参照してください。
+このドキュメントは VRCloth-Fitter の開発計画を示します。背景にある設計判断と競合分析は [docs/DESIGN.md](docs/DESIGN.md) を、ドキュメント全体の索引は [docs/README.md](docs/README.md) を参照してください。
 
 ## 基本理念
 
@@ -26,6 +26,7 @@
 
 - [x] リポジトリから VRChat SDK 等の再配布禁止物を除去(履歴含む)
 - [x] LICENSE(MIT)とドキュメント整備
+- [ ] 公開前レビュー — docs 全体のトーン(競合言及が事実ベースか)と `.beads/issues.jsonl` のノート内容を確認([docs/INFORMATION_ARCHITECTURE.md](docs/INFORMATION_ARCHITECTURE.md) §6 の規律で)
 - [ ] リポジトリの public 化
 - [x] Runtime/Editor の asmdef 整備(Core / Runtime / Editor / Tests.Editor の4アセンブリ構成)
 - [ ] VPM パッケージ化(VRClothFitter コンポーネントの IEditorOnly 化を含む)
@@ -45,6 +46,17 @@
 - [ ] **高品質モード** — XPBD(伸び・曲げ・衝突拘束)や局所 ARAP 等による、より自然な変形。候補手法の比較は [docs/DEFORMATION_METHODS.md](docs/DEFORMATION_METHODS.md)
 - [ ] **FFD ケージ編集** — 手動微調整とブレンドシェイプ保存
 - [ ] **ローカル完結フィット** — 変換元アバターも所持している前提の体型変換(No Cache と両立する唯一の形)。ただし先行ツール Alterith が同方式を実現済みのため優先度は低い
+
+## フェーズ5: エコシステム標準(構想)
+
+プリフライト診断を互換性標準へ育てる構想([docs/ECOSYSTEM_VISION.md](docs/ECOSYSTEM_VISION.md))。フェーズ1の完成と E2E でのしきい値較正が前提。実装順は柔軟(フェーズ2〜3と並行可)。
+
+- [ ] **クリアランス統計** — 隙間(体表面→布)の percentile を診断に追加し、判定を両側化(TIGHT / FIT / LOOSE)。「ブカブカ」が診断に映らない片側性の補完
+- [ ] **採寸機能** — Humanoid 基準の標準計測点で素体の周径を計測(フェーズ3「カプセル半径の自動推定」と同一機構として実装)
+- [ ] **Fit Report フォーマット** — 機械可読 JSON(計測条件・ツールバージョン・メッシュハッシュ刻印)+バッジ表示
+- [ ] **NDMF パス化** — ビルド時自動修正(Merge Armature 後に実行される製品形態。エディタボタンはプレビュー用に残す)
+- [ ] **しきい値バージョニング** — 較正で変わる判定の互換性管理
+- [ ] **基準マネキンの選定** — 再配布自由なアバター数体を検証用の共通物差しに
 
 ## 凍結: 差分キャッシュの保存・共有
 
