@@ -60,13 +60,16 @@ namespace VRClothFitter
 
         static ClothSnapshot CaptureRenderer(SkinnedMeshRenderer renderer)
         {
-            // BakeMesh(useScale: true) bakes the current pose with the
-            // renderer transform's scale already applied to the vertices, so
-            // only rotation and translation remain to reach world space.
+            // BakeMesh(useScale: false) leaves every scale effect baked into
+            // the vertices and divides out only the renderer's rotation and
+            // translation, so a rigid TRS(position, rotation, 1) — always
+            // invertible, even for degenerate renderer scales — reaches world
+            // space. (useScale: true would instead require the full
+            // localToWorldMatrix; verified empirically on 2022.3.)
             var baked = new Mesh();
             try
             {
-                renderer.BakeMesh(baked, true);
+                renderer.BakeMesh(baked, false);
 
                 Vector3[] vertices = baked.vertices;
                 Matrix4x4 toWorld = Matrix4x4.TRS(
