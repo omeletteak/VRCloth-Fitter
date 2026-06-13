@@ -29,7 +29,7 @@ namespace VRClothFitter
                 Transform end = animator.GetBoneTransform(endBone);
                 if (start && end)
                 {
-                    capsules.Add(new BodyCapsule(start.position, end.position, radius));
+                    capsules.Add(new BodyCapsule(start.position, end.position, radius, $"{startBone}→{endBone}"));
                 }
             }
 

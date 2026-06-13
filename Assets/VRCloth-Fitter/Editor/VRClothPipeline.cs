@@ -50,15 +50,16 @@ namespace VRClothFitter
 
             // Preflight: judge per renderer whether the body-shape difference
             // is within the supported envelope (docs/DESIGN.md §9).
+            var reports = new PreflightReport[cloth.Count];
             var verdicts = new PreflightVerdict[cloth.Count];
             for (int i = 0; i < cloth.Count; i++)
             {
                 var snapshot = cloth[i];
-                var report = PreflightDiagnostic.Evaluate(
+                reports[i] = PreflightDiagnostic.Evaluate(
                     snapshot.worldVertices, snapshot.triangles, snapshot.hits, capsules, fitter.margin);
-                verdicts[i] = report.verdict;
-                Debug.Log(FormatPreflight(snapshot.renderer.name, report));
-                if (report.verdict == PreflightVerdict.Red)
+                verdicts[i] = reports[i].verdict;
+                Debug.Log(FormatPreflight(snapshot.renderer.name, reports[i]));
+                if (reports[i].verdict == PreflightVerdict.Red)
                 {
                     Debug.LogWarning(fitter.forceApplyOutOfRange
                         ? $"[VRClothFitter] {snapshot.renderer.name}: RED, but Force Apply (Out of Range) is enabled — applying anyway. Expect artifacts; this is retargeting-class difference (docs/DESIGN.md §9)."
@@ -66,35 +67,33 @@ namespace VRClothFitter
                 }
             }
 
+            var solve = new VRClothRunLog.SolveSummary();
             if (hits.Count > 0)
             {
-                int passes = 0;
-                int remaining = 0;
-                int applied = 0;
-                int skipped = 0;
                 for (int i = 0; i < cloth.Count; i++)
                 {
                     if (verdicts[i] == PreflightVerdict.Red && !fitter.forceApplyOutOfRange)
                     {
-                        skipped++;
+                        solve.skippedRenderers++;
                         continue;
                     }
                     var snapshot = cloth[i];
                     var result = PenetrationSolver.Solve(snapshot.worldVertices, snapshot.triangles, capsules, fitter.margin);
-                    passes = Mathf.Max(passes, result.passes);
-                    remaining += result.finalHitCount;
+                    solve.passes = Mathf.Max(solve.passes, result.passes);
+                    solve.remainingPenetrating += result.finalHitCount;
                     if (result.initialHitCount > 0)
                     {
                         VRClothMeshApplier.Apply(snapshot);
-                        applied++;
+                        solve.appliedRenderers++;
                     }
                 }
-                Debug.Log($"[VRClothFitter] Push-out + smoothing finished after {passes} pass(es); {remaining} vertices still penetrating.");
-                Debug.Log($"[VRClothFitter] Applied fitted mesh copies to {applied} renderer(s)"
-                    + (skipped > 0 ? $", skipped {skipped} out-of-range renderer(s)" : "")
+                Debug.Log($"[VRClothFitter] Push-out + smoothing finished after {solve.passes} pass(es); {solve.remainingPenetrating} vertices still penetrating.");
+                Debug.Log($"[VRClothFitter] Applied fitted mesh copies to {solve.appliedRenderers} renderer(s)"
+                    + (solve.skippedRenderers > 0 ? $", skipped {solve.skippedRenderers} out-of-range renderer(s)" : "")
                     + ". Originals untouched; Undo (Ctrl+Z) restores.");
             }
 
+            VRClothRunLog.Write(fitter, cloth, capsules, hits, reports, solve);
             Debug.Log("[VRClothFitter] Process complete.");
         }
 

@@ -11,11 +11,23 @@ namespace VRClothFitter
         public Vector3 end;
         public float radius;
 
+        /// <summary>
+        /// Human-readable origin of this capsule (e.g. "LeftUpperArm→LeftLowerArm"),
+        /// used by the run log to attribute hits to a body part. Optional.
+        /// </summary>
+        public string label;
+
         public BodyCapsule(Vector3 start, Vector3 end, float radius)
+            : this(start, end, radius, null)
+        {
+        }
+
+        public BodyCapsule(Vector3 start, Vector3 end, float radius, string label)
         {
             this.start = start;
             this.end = end;
             this.radius = radius;
+            this.label = label;
         }
 
         /// <summary>
