@@ -46,7 +46,7 @@ max 0.0 mm below surface (0% of capsule radius), p95 0.0 mm, largest patch 0.0%,
    - `Preflight ...: GREEN/YELLOW` と各数値(こまどペアなら緑〜黄の想定)
    - `Push-out + smoothing finished after N pass(es); M vertices still penetrating` — **M = 0** が期待値
    - `Applied fitted mesh copies to N renderer(s)`
-4. 目視評価 — 主戦場は**肌見せ境界×関節**:
+4. 目視評価 — 要所は**肌見せ境界×関節**:
    - 袖口⇔肘、襟元・鎖骨、裾⇔太もも、ソックス上端⇔膝
    - 貫通が消えたか
    - 修正領域の境界に膨らみ・段差が見えないか
