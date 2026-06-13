@@ -27,7 +27,7 @@
 - [x] リポジトリから VRChat SDK 等の再配布禁止物を除去(履歴含む)
 - [x] LICENSE(MIT)とドキュメント整備
 - [x] リポジトリの public 化(完了済みだったが bd の表示不具合で未完了扱いになっていた — bd: 4ea は closed)
-- [x] 公開内容レビュー — docs 全体のトーン(競合言及が事実ベースか)と `.beads/issues.jsonl` のノート内容を [docs/INFORMATION_ARCHITECTURE.md](docs/INFORMATION_ARCHITECTURE.md) §6 の規律で確認(2026-06-13 実施、問題なし)
+- [x] 公開内容レビュー — docs 全体のトーンと `.beads/issues.jsonl` のノートを [docs/INFORMATION_ARCHITECTURE.md](docs/INFORMATION_ARCHITECTURE.md) §6 の規律で確認(2026-06-13 実施)。同日、炎上リスク低減のため競合の名指し解析を構造的記述へ改め、開放/閉鎖の道徳的フレームを緩和
 - [x] Runtime/Editor の asmdef 整備(Core / Runtime / Editor / Tests.Editor の4アセンブリ構成)
 - [ ] VPM パッケージ化(VRClothFitter コンポーネントの IEditorOnly 化を含む)
 - [ ] VPM リポジトリ(vpm-listing)での配布 — ALCOM / VCC どちらからも追加できる標準 VPM 形式(両者はリポジトリ設定を共有)
@@ -62,8 +62,8 @@
 
 旧ロードマップにあった「差分キャッシュの保存・再利用」「体型差分プリセットの共有」(旧 FUTURE_PLANS.md の構想を含む)は**凍結**します。
 
-- 体型差分の共有という構想自体は、先行ツール「もちふぃった～」が変換プロファイルとして製品化済み
-- そして当プロジェクトの調査で、この種の差分データは**元アバターの素体形状を実質的に丸ごと含んでしまう**ことを確認した(詳細は [docs/DESIGN.md](docs/DESIGN.md))
+- 体型差分の共有という方向は、変換型の先行ツールが既に担っており機能的な空白がない
+- そして保存・配布する差分データは原理的に元アバターの体型情報を含み、No Cache 原則と衝突する(詳細は [docs/DESIGN.md](docs/DESIGN.md) §4)
 - 量子化やノイズ付加による「安全化」も検討したが、安全性を保証する形式の議論が固まらない限り実装しない。これが No Cache 原則の由来
 
 ## 経緯(旧世代の記録)
