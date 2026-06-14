@@ -57,6 +57,27 @@ namespace VRClothFitter
                     "Apply even when the preflight diagnostic judges RED (body-shape difference beyond the supported range). Results will look wrong; see docs/DESIGN.md §9."),
                 fitter.forceApplyOutOfRange);
 
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Body Radius Estimation", EditorStyles.boldLabel);
+
+            fitter.estimateRadiiFromBody = EditorGUILayout.Toggle(
+                new GUIContent("Estimate Radii From Body",
+                    "Measure each proxy capsule's radius from the avatar's body mesh instead of fixed defaults."),
+                fitter.estimateRadiiFromBody);
+
+            using (new EditorGUI.DisabledScope(!fitter.estimateRadiiFromBody))
+            {
+                fitter.bodyMesh = (SkinnedMeshRenderer)EditorGUILayout.ObjectField(
+                    new GUIContent("Body Mesh (Optional)",
+                        "Auto-detected when empty: largest active skinned mesh on the Hips bone, excluding the cloth."),
+                    fitter.bodyMesh, typeof(SkinnedMeshRenderer), true);
+
+                fitter.radiusPercentile = EditorGUILayout.Slider(
+                    new GUIContent("Radius Percentile",
+                        "Per capsule, the radius is this percentile of body-surface distances. Higher = looser, lower = tighter."),
+                    fitter.radiusPercentile, 0.5f, 1f);
+            }
+
             if (EditorGUI.EndChangeCheck())
             {
                 EditorUtility.SetDirty(fitter);
@@ -92,6 +113,10 @@ namespace VRClothFitter
                 var capsules = VRClothProxyGenerator.Generate(fitter.targetAvatar);
                 if (capsules != null)
                 {
+                    if (fitter.estimateRadiiFromBody)
+                    {
+                        capsules = VRClothBodyRadiusEstimator.Apply(fitter, capsules).capsules;
+                    }
                     VRClothDebugVisualizer.SetCapsules(capsules);
                 }
             }

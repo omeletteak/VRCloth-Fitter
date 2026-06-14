@@ -18,11 +18,33 @@ namespace VRClothFitter
     /// </summary>
     public static class VRClothRunLog
     {
-        public const string FileName = "vrcloth-fitter-log.json";
+        public const string FilePrefix = "vrcloth-fitter-log";
 
-        /// <summary>Project-root path (sibling of Assets/) of the latest run log.</summary>
-        public static string FilePath =>
-            Path.Combine(Directory.GetParent(Application.dataPath).FullName, FileName);
+        /// <summary>
+        /// Project-root path (sibling of Assets/) of the latest run log for the
+        /// given avatar. The avatar name is folded into the file name so logs
+        /// from several avatars coexist instead of overwriting each other;
+        /// re-running the same avatar overwrites only its own file.
+        /// </summary>
+        public static string FilePathFor(string avatarName)
+        {
+            string safe = Sanitize(avatarName);
+            string file = string.IsNullOrEmpty(safe) ? FilePrefix + ".json" : $"{FilePrefix}__{safe}.json";
+            return Path.Combine(Directory.GetParent(Application.dataPath).FullName, file);
+        }
+
+        static string Sanitize(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return "";
+            }
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(c, '_');
+            }
+            return name;
+        }
 
         public struct SolveSummary
         {
@@ -43,8 +65,9 @@ namespace VRClothFitter
             try
             {
                 string json = JsonUtility.ToJson(BuildDto(fitter, cloth, capsules, hits, reports, solve), true);
-                File.WriteAllText(FilePath, json);
-                Debug.Log($"[VRClothFitter] Run log written: {FilePath}");
+                string path = FilePathFor((fitter != null && fitter.targetAvatar != null) ? fitter.targetAvatar.name : "");
+                File.WriteAllText(path, json);
+                Debug.Log($"[VRClothFitter] Run log written: {path}");
             }
             catch (Exception e)
             {

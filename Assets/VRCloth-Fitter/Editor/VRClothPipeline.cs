@@ -42,6 +42,10 @@ namespace VRClothFitter
                 Debug.LogError("Failed to generate proxy capsules. Aborting.");
                 return;
             }
+            if (fitter.estimateRadiiFromBody)
+            {
+                capsules = VRClothBodyRadiusEstimator.Apply(fitter, capsules).capsules;
+            }
             VRClothDebugVisualizer.SetCapsules(capsules);
 
             List<PenetrationHit> hits = VRClothPenetrationDetector.Detect(cloth, capsules, fitter.margin);

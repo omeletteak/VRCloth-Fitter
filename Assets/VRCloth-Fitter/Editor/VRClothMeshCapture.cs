@@ -91,5 +91,37 @@ namespace VRClothFitter
                 Object.DestroyImmediate(baked);
             }
         }
+
+        /// <summary>
+        /// Bakes one renderer's current pose to world-space vertices, using the
+        /// same convention as <see cref="CaptureRenderer"/> (BakeMesh
+        /// useScale:false, then a rigid TRS). Used to sample the avatar body for
+        /// capsule radius estimation, where only positions — not triangles — are
+        /// needed.
+        /// </summary>
+        public static Vector3[] BakeWorldVertices(SkinnedMeshRenderer renderer)
+        {
+            if (renderer == null || renderer.sharedMesh == null)
+            {
+                return new Vector3[0];
+            }
+            var baked = new Mesh();
+            try
+            {
+                renderer.BakeMesh(baked, false);
+                Vector3[] vertices = baked.vertices;
+                Matrix4x4 toWorld = Matrix4x4.TRS(
+                    renderer.transform.position, renderer.transform.rotation, Vector3.one);
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    vertices[i] = toWorld.MultiplyPoint3x4(vertices[i]);
+                }
+                return vertices;
+            }
+            finally
+            {
+                Object.DestroyImmediate(baked);
+            }
+        }
     }
 }

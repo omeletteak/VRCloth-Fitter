@@ -25,6 +25,17 @@ namespace VRClothFitter
         [Tooltip("Apply the fit even when the preflight diagnostic judges the body-shape difference out of the supported range (RED). Results will look wrong — this tool corrects penetration, it does not retarget garments. See docs/DESIGN.md §9.")]
         public bool forceApplyOutOfRange = false;
 
+        [Header("Body Radius Estimation")]
+        [Tooltip("Measure each proxy capsule's radius from the avatar's body mesh instead of fixed defaults. Off = legacy fixed radii.")]
+        public bool estimateRadiiFromBody = true;
+
+        [Tooltip("Body mesh to measure radii from. Auto-detected (largest active skinned mesh on the Hips bone, excluding the cloth) when left empty.")]
+        public SkinnedMeshRenderer bodyMesh;
+
+        [Tooltip("Per capsule, the radius is this percentile of the body-surface distances assigned to it. Higher = looser (envelops more of the body), lower = tighter.")]
+        [Range(0.5f, 1f)]
+        public float radiusPercentile = 0.75f;
+
         private void Reset()
         {
             AutoDetectComponents();
