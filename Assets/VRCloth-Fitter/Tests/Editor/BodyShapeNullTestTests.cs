@@ -66,6 +66,53 @@ namespace VRClothFitter.Tests
             Assert.AreEqual(0.02f, sd, 0.003f);
         }
 
+        [Test]
+        public void CrossFit_LocalBodyBulge_IsSolvedByMeshSdf()
+        {
+            // The synthetic equivalent of 手順1 (cross-fitting): a garment that
+            // fits the base body, worn over a body with a localized bulge (a
+            // bigger chest), so it penetrates only over that patch — the
+            // "半径方向・局所・まだら" difference docs/DESIGN.md §9 supports.
+            BuildEllipsoid(out Vector3[] bodyVerts, out int[] bodyTris, out Vector3[] normals, 20, 28);
+            Vector3[] cloth = OffsetAlongNormals(bodyVerts, normals, Clearance);
+            int[] clothTris = (int[])bodyTris.Clone();
+
+            // Bulge the front-mid of the body past the garment by ~1 cm so the
+            // cloth ends up ~1 cm inside there (yellow-class depth, not red).
+            for (int i = 0; i < bodyVerts.Length; i++)
+            {
+                Vector3 d = normals[i];
+                if (d.z > 0.5f && Mathf.Abs(d.y) < 0.35f)
+                {
+                    bodyVerts[i] += normals[i] * 0.018f;
+                }
+            }
+            var body = new MeshSdfCollider(bodyVerts, bodyTris);
+
+            var hitsBefore = PenetrationDetection.Scan(cloth, body, Margin);
+            Assert.Greater(hitsBefore.Count, 0, "the bulge should push the garment into the body");
+
+            // Preflight: a local bulge of this size is in scope (not retargeting).
+            var report = PreflightDiagnostic.Evaluate(cloth, clothTris, hitsBefore, body, Margin);
+            Assert.AreNotEqual(PreflightVerdict.Red, report.verdict,
+                $"a ~1 cm local bulge should stay in scope, got {report.verdict} (maxDepth {report.maxDepth * 1000f:F1} mm, ratio {report.penetratingRatio:P1})");
+
+            var result = PenetrationSolver.Solve(cloth, clothTris, body, Margin);
+            Assert.Greater(result.initialHitCount, 0);
+            Assert.AreEqual(0, result.finalHitCount, "the solver should clear every penetration");
+
+            // Every cloth vertex now rests on or above the margin surface.
+            int stillInside = 0;
+            for (int i = 0; i < cloth.Length; i++)
+            {
+                if (body.SignedDistance(cloth[i]) < Margin - 1e-3f)
+                {
+                    stillInside++;
+                }
+            }
+            Assert.AreEqual(0, stillInside, "no cloth vertex should remain inside the body after the solve");
+        }
+
         // --- helpers -------------------------------------------------------
 
         /// <summary>
