@@ -40,7 +40,9 @@ NDMF はビルドをフェーズに分けて実行する（Resolving → Generat
 2. `InPhase(BuildPhase.Transforming).AfterPlugin("nadena.dev.modular-avatar")` — **MA マージ後・最適化前（本命スロット）**
 3. `InPhase(BuildPhase.PlatformFinish)` — 最適化後（最終状態）
 
-各点で SMR ごとに「階層パス / 頂点数 / ブレンドシェイプ数 / ボーン数 / rootBone・bone[0] の階層パス / ワールド bounds」を出す。**ボーンの階層パス**がマージ完了の指標（衣装の bones が素体アーマチュア配下を指す）、**頂点数・SMR 数の変化**が最適化のトポロジ改変の指標。
+各点で SMR ごとに「階層パス / 頂点数 / ブレンドシェイプ数 / ボーン数 / rootBone・bone[0] の階層パス / ワールド bounds」を記録する。**ボーンの階層パス**がマージ完了の指標（衣装の bones が素体アーマチュア配下を指す）、**頂点数・SMR 数の変化**が最適化のトポロジ改変の指標。
+
+出力は project ルートの **`vrcloth-ndmf-probe.json`**（3点のスナップショットを1ファイルに集約）に書く。Console コピペでなくこの JSON を直接読んで判定する（[VRClothRunLog](../Assets/VRCloth-Fitter/Editor/VRClothRunLog.cs) と同じ「AI が読める場所に出す」方針）。Console には各点1行の確認ログ（フェーズ・SMR 数・出力パス）のみ。
 
 プローブは VRCloth-Fitter パッケージではなく**テストプロジェクト側**（`Assets/VRClothSpike/`、専用 Editor asmdef + 1ファイル）に置く。NDMF 依存をパッケージへ持ち込まないため。スパイク後は削除する。
 
@@ -49,7 +51,7 @@ NDMF はビルドをフェーズに分けて実行する（Resolving → Generat
 1. **プローブ配置（実施済み）** — `vrcloth-fitter-test/Assets/VRClothSpike/` に確定版プローブ + 専用 Editor asmdef（`nadena.dev.ndmf` 参照）を配置済み。API は導入済み NDMF ソースで確認済み。
 2. テストアバター（MA 衣装 + Avatar Optimizer あり）にプローブを入れる。
 3. **Manual bake avatar**（アップロード不要・エディタ内でビルドパイプラインを実走）で焼く。
-4. Console ログを読み、①②③を判定する。
+4. プローブが project ルートに `vrcloth-ndmf-probe.json`（3点の SMR スナップショット）を書く。これを読んで①②③を判定する。
 5. 順序指定（AfterPlugin / BeforePlugin 等）を変え、NDMF が実際にどう並べ替えるかを観測する。
 
 ## 成功・失敗の基準
