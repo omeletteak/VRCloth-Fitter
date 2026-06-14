@@ -42,13 +42,37 @@ namespace VRClothFitter
             int rings = 2,
             int maxPasses = 3)
         {
+            if (capsules == null || capsules.Count == 0)
+            {
+                return new Result();
+            }
+            return Solve(positions, triangles, new CapsuleBodyCollider(capsules), margin,
+                lambda, smoothingIterations, rings, maxPasses);
+        }
+
+        /// <summary>
+        /// Collider-backend solve. The capsule overload routes here through
+        /// <see cref="CapsuleBodyCollider"/>, so this is the single
+        /// implementation; only the body representation differs (bone capsules
+        /// or a mesh SDF, docs/DESIGN.md §6).
+        /// </summary>
+        public static Result Solve(
+            Vector3[] positions,
+            int[] triangles,
+            IBodyCollider collider,
+            float margin,
+            float lambda = 0.5f,
+            int smoothingIterations = 2,
+            int rings = 2,
+            int maxPasses = 3)
+        {
             var result = new Result();
-            if (positions == null || positions.Length == 0 || capsules == null || capsules.Count == 0)
+            if (positions == null || positions.Length == 0 || collider == null)
             {
                 return result;
             }
 
-            var hits = PenetrationDetection.Scan(positions, capsules, margin);
+            var hits = PenetrationDetection.Scan(positions, collider, margin);
             result.initialHitCount = hits.Count;
             if (hits.Count == 0)
             {
@@ -62,7 +86,7 @@ namespace VRClothFitter
             var adjacency = VertexAdjacency.Build(originals, triangles);
             var seeds = new HashSet<int>();
 
-            PenetrationPushOut.Apply(originals, displacements, hits, capsules, margin);
+            PenetrationPushOut.Apply(originals, displacements, hits, collider, margin);
             AddSeeds(seeds, hits);
 
             while (result.passes < maxPasses)
@@ -72,7 +96,7 @@ namespace VRClothFitter
                 LaplacianSmoothing.Smooth(displacements, adjacency, region, lambda, smoothingIterations);
 
                 Compose(originals, displacements, positions);
-                hits = PenetrationDetection.Scan(positions, capsules, margin);
+                hits = PenetrationDetection.Scan(positions, collider, margin);
                 if (hits.Count == 0)
                 {
                     break;
@@ -80,12 +104,12 @@ namespace VRClothFitter
 
                 // Smoothing sank these below the surface again; push them
                 // back out so every cycle (and the solve) ends on a push.
-                PenetrationPushOut.Apply(originals, displacements, hits, capsules, margin);
+                PenetrationPushOut.Apply(originals, displacements, hits, collider, margin);
                 AddSeeds(seeds, hits);
             }
 
             Compose(originals, displacements, positions);
-            result.finalHitCount = PenetrationDetection.Scan(positions, capsules, margin - 1e-4f).Count;
+            result.finalHitCount = PenetrationDetection.Scan(positions, collider, margin - 1e-4f).Count;
             return result;
         }
 

@@ -40,7 +40,7 @@ namespace VRClothFitter
                 return outcome;
             }
 
-            SkinnedMeshRenderer body = fitter.bodyMesh != null ? fitter.bodyMesh : DetectBodyMesh(fitter);
+            SkinnedMeshRenderer body = fitter.bodyMesh != null ? fitter.bodyMesh : ResolveBodyMesh(fitter);
             outcome.bodyMesh = body;
             if (body == null || body.sharedMesh == null)
             {
@@ -82,7 +82,7 @@ namespace VRClothFitter
         /// that are not part of the cloth being fitted, the one skinned to the
         /// Hips bone with the most vertices. Logged so the user can correct it.
         /// </summary>
-        static SkinnedMeshRenderer DetectBodyMesh(VRClothFitter fitter)
+        public static SkinnedMeshRenderer ResolveBodyMesh(VRClothFitter fitter)
         {
             GameObject avatar = fitter.targetAvatar;
             if (avatar == null)

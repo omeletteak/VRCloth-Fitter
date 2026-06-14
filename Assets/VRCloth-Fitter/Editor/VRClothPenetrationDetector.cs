@@ -25,5 +25,25 @@ namespace VRClothFitter
             }
             return allHits;
         }
+
+        /// <summary>
+        /// Same as the capsule scan, against an arbitrary body collider (the
+        /// mesh-SDF backend, docs/DESIGN.md §6). Hits carry no capsule index.
+        /// </summary>
+        public static List<PenetrationHit> Detect(IReadOnlyList<ClothSnapshot> cloth, IBodyCollider collider, float margin)
+        {
+            var allHits = new List<PenetrationHit>();
+            if (cloth == null)
+            {
+                return allHits;
+            }
+
+            foreach (var snapshot in cloth)
+            {
+                snapshot.hits = PenetrationDetection.Scan(snapshot.worldVertices, collider, margin);
+                allHits.AddRange(snapshot.hits);
+            }
+            return allHits;
+        }
     }
 }

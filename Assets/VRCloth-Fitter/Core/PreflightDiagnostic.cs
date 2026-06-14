@@ -70,13 +70,60 @@ namespace VRClothFitter
             IReadOnlyList<BodyCapsule> capsules,
             float margin)
         {
+            if (capsules == null)
+            {
+                return new PreflightReport
+                {
+                    vertexCount = positions != null ? positions.Length : 0,
+                    hitCount = hits != null ? hits.Count : 0,
+                    verdict = PreflightVerdict.Green,
+                };
+            }
+            // The closest capsule's radius is the local thickness; depth/radius
+            // keeps its capsule meaning.
+            return Evaluate(positions, triangles, hits, margin,
+                hit => capsules[hit.capsuleIndex].radius);
+        }
+
+        /// <summary>
+        /// Collider-backend preflight. Depth is measured the same way; the
+        /// local thickness used to normalize it comes from the collider
+        /// (capsule radius or a nominal mesh thickness, docs/DESIGN.md §9).
+        /// </summary>
+        public static PreflightReport Evaluate(
+            Vector3[] positions,
+            int[] triangles,
+            IReadOnlyList<PenetrationHit> hits,
+            IBodyCollider collider,
+            float margin)
+        {
+            if (collider == null)
+            {
+                return new PreflightReport
+                {
+                    vertexCount = positions != null ? positions.Length : 0,
+                    hitCount = hits != null ? hits.Count : 0,
+                    verdict = PreflightVerdict.Green,
+                };
+            }
+            return Evaluate(positions, triangles, hits, margin,
+                hit => collider.LocalThickness(hit.position));
+        }
+
+        static PreflightReport Evaluate(
+            Vector3[] positions,
+            int[] triangles,
+            IReadOnlyList<PenetrationHit> hits,
+            float margin,
+            System.Func<PenetrationHit, float> localThicknessOf)
+        {
             var report = new PreflightReport
             {
                 vertexCount = positions != null ? positions.Length : 0,
                 hitCount = hits != null ? hits.Count : 0,
                 verdict = PreflightVerdict.Green,
             };
-            if (report.vertexCount == 0 || hits == null || capsules == null)
+            if (report.vertexCount == 0 || hits == null)
             {
                 return report;
             }
@@ -94,10 +141,10 @@ namespace VRClothFitter
                 penetratingVertices.Add(hit.vertexIndex);
                 report.maxDepth = Mathf.Max(report.maxDepth, surfaceDepth);
 
-                float radius = capsules[hit.capsuleIndex].radius;
-                if (radius > 1e-6f)
+                float thickness = localThicknessOf(hit);
+                if (thickness > 1e-6f)
                 {
-                    report.maxDepthOverRadius = Mathf.Max(report.maxDepthOverRadius, surfaceDepth / radius);
+                    report.maxDepthOverRadius = Mathf.Max(report.maxDepthOverRadius, surfaceDepth / thickness);
                 }
             }
 

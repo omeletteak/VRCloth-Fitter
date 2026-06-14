@@ -25,6 +25,9 @@ namespace VRClothFitter
         [Tooltip("Apply the fit even when the preflight diagnostic judges the body-shape difference out of the supported range (RED). Results will look wrong — this tool corrects penetration, it does not retarget garments. See docs/DESIGN.md §9.")]
         public bool forceApplyOutOfRange = false;
 
+        [Tooltip("Use a mesh signed-distance collider built from the avatar's body mesh instead of bone capsules. Capsules can't represent the elliptical cross-section of the torso or the feet, so their null test reports false penetration; the mesh SDF fixes that (docs/DESIGN.md §6). Built in memory and discarded — No Cache holds. Off by default until E2E calibrates the thresholds.")]
+        public bool useMeshSdfCollider = false;
+
         [Header("Body Radius Estimation")]
         [Tooltip("Measure each proxy capsule's radius from the avatar's body mesh instead of fixed defaults. Off = legacy fixed radii.")]
         public bool estimateRadiiFromBody = true;

@@ -46,5 +46,31 @@ namespace VRClothFitter
             }
             return hits;
         }
+
+        /// <summary>
+        /// Collider-backend scan: one <see cref="PenetrationHit"/> for every
+        /// position whose signed distance to the body is below
+        /// <paramref name="margin"/>. The body has no capsule index, so hits
+        /// carry -1 there; push-out queries the collider directly. Input order
+        /// is preserved.
+        /// </summary>
+        public static List<PenetrationHit> Scan(IReadOnlyList<Vector3> positions, IBodyCollider collider, float margin)
+        {
+            var hits = new List<PenetrationHit>();
+            if (positions == null || collider == null)
+            {
+                return hits;
+            }
+
+            for (int v = 0; v < positions.Count; v++)
+            {
+                float distance = collider.SignedDistance(positions[v]);
+                if (distance < margin)
+                {
+                    hits.Add(new PenetrationHit(v, positions[v], margin - distance, -1));
+                }
+            }
+            return hits;
+        }
     }
 }

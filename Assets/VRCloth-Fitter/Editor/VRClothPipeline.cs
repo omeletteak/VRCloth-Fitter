@@ -46,11 +46,35 @@ namespace VRClothFitter
             {
                 capsules = VRClothBodyRadiusEstimator.Apply(fitter, capsules).capsules;
             }
-            VRClothDebugVisualizer.SetCapsules(capsules);
-
-            List<PenetrationHit> hits = VRClothPenetrationDetector.Detect(cloth, capsules, fitter.margin);
+            // Pick the collision backend: the mesh-SDF collider when requested
+            // and a body mesh is available, otherwise the bone capsules
+            // (docs/DESIGN.md §6). Detection differs (the mesh has no capsule
+            // index); preflight and the solver run through the IBodyCollider
+            // abstraction either way.
+            IBodyCollider collider;
+            List<PenetrationHit> hits;
+            string backend;
+            MeshSdfCollider sdf = fitter.useMeshSdfCollider ? VRClothBodySdfBuilder.Build(fitter) : null;
+            if (sdf != null)
+            {
+                collider = sdf;
+                backend = "mesh";
+                VRClothDebugVisualizer.SetCapsules(System.Array.Empty<BodyCapsule>());
+                hits = VRClothPenetrationDetector.Detect(cloth, collider, fitter.margin);
+            }
+            else
+            {
+                if (fitter.useMeshSdfCollider)
+                {
+                    Debug.LogWarning("[VRClothFitter] Mesh-SDF collider unavailable — falling back to bone capsules for this run.");
+                }
+                collider = new CapsuleBodyCollider(capsules);
+                backend = "capsule";
+                VRClothDebugVisualizer.SetCapsules(capsules);
+                hits = VRClothPenetrationDetector.Detect(cloth, capsules, fitter.margin);
+            }
             VRClothDebugVisualizer.SetHits(hits);
-            Debug.Log($"[VRClothFitter] Detected {hits.Count} penetrating vertices (margin {fitter.margin:F3} m).");
+            Debug.Log($"[VRClothFitter] Detected {hits.Count} penetrating vertices (margin {fitter.margin:F3} m, {backend} backend).");
 
             // Preflight: judge per renderer whether the body-shape difference
             // is within the supported envelope (docs/DESIGN.md §9).
@@ -60,7 +84,7 @@ namespace VRClothFitter
             {
                 var snapshot = cloth[i];
                 reports[i] = PreflightDiagnostic.Evaluate(
-                    snapshot.worldVertices, snapshot.triangles, snapshot.hits, capsules, fitter.margin);
+                    snapshot.worldVertices, snapshot.triangles, snapshot.hits, collider, fitter.margin);
                 verdicts[i] = reports[i].verdict;
                 Debug.Log(FormatPreflight(snapshot.renderer.name, reports[i]));
                 if (reports[i].verdict == PreflightVerdict.Red)
@@ -82,7 +106,7 @@ namespace VRClothFitter
                         continue;
                     }
                     var snapshot = cloth[i];
-                    var result = PenetrationSolver.Solve(snapshot.worldVertices, snapshot.triangles, capsules, fitter.margin);
+                    var result = PenetrationSolver.Solve(snapshot.worldVertices, snapshot.triangles, collider, fitter.margin);
                     solve.passes = Mathf.Max(solve.passes, result.passes);
                     solve.remainingPenetrating += result.finalHitCount;
                     if (result.initialHitCount > 0)
@@ -97,9 +121,11 @@ namespace VRClothFitter
                     + ". Originals untouched; Undo (Ctrl+Z) restores.");
             }
 
-            // Backend is the bone capsule proxy today; the mesh-SDF collider
-            // spike will pass "mesh" so both can be compared in one log.
-            VRClothRunLog.Write(fitter, cloth, capsules, hits, reports, solve, "capsule");
+            // The run log records which backend produced these hits so capsule
+            // and mesh-SDF runs can be compared (docs/DESIGN.md §6). Capsule
+            // geometry is still logged; per-capsule attribution is skipped for
+            // mesh hits, which carry no capsule index.
+            VRClothRunLog.Write(fitter, cloth, capsules, hits, reports, solve, backend);
             Debug.Log("[VRClothFitter] Process complete.");
         }
 

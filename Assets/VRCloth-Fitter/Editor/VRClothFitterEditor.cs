@@ -57,6 +57,11 @@ namespace VRClothFitter
                     "Apply even when the preflight diagnostic judges RED (body-shape difference beyond the supported range). Results will look wrong; see docs/DESIGN.md §9."),
                 fitter.forceApplyOutOfRange);
 
+            fitter.useMeshSdfCollider = EditorGUILayout.Toggle(
+                new GUIContent("Use Mesh SDF Collider",
+                    "Collide against a signed-distance field built from the avatar's body mesh instead of bone capsules. Capsules can't represent the torso/feet cross-section; the mesh SDF removes that false-penetration source (docs/DESIGN.md §6). Built in memory, never saved. Off by default until E2E calibrates."),
+                fitter.useMeshSdfCollider);
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Body Radius Estimation", EditorStyles.boldLabel);
 
@@ -65,13 +70,18 @@ namespace VRClothFitter
                     "Measure each proxy capsule's radius from the avatar's body mesh instead of fixed defaults."),
                 fitter.estimateRadiiFromBody);
 
-            using (new EditorGUI.DisabledScope(!fitter.estimateRadiiFromBody))
+            // The body mesh feeds both radius estimation and the mesh-SDF
+            // collider, so allow assigning it when either is on.
+            using (new EditorGUI.DisabledScope(!fitter.estimateRadiiFromBody && !fitter.useMeshSdfCollider))
             {
                 fitter.bodyMesh = (SkinnedMeshRenderer)EditorGUILayout.ObjectField(
                     new GUIContent("Body Mesh (Optional)",
-                        "Auto-detected when empty: largest active skinned mesh on the Hips bone, excluding the cloth."),
+                        "Auto-detected when empty: largest active skinned mesh on the Hips bone, excluding the cloth. Used for radius estimation and the mesh-SDF collider."),
                     fitter.bodyMesh, typeof(SkinnedMeshRenderer), true);
+            }
 
+            using (new EditorGUI.DisabledScope(!fitter.estimateRadiiFromBody))
+            {
                 fitter.radiusPercentile = EditorGUILayout.Slider(
                     new GUIContent("Radius Percentile",
                         "Per capsule, the radius is this percentile of body-surface distances. Higher = looser, lower = tighter."),
