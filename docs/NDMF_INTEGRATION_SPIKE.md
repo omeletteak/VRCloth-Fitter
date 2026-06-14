@@ -70,12 +70,12 @@ NDMF はビルドをフェーズに分けて実行する（Resolving → Generat
 |---|---|
 | 実行フェーズ・順 | 3点とも期待通り発火。`InPhase(Transforming).AfterPlugin("nadena.dev.modular-avatar")` が安定スロットとして機能 |
 | ①マージ済みか | **Yes。** Generating では衣装の rootBone/bone0 = 衣装自前 `…/Armature.1/Hips`、bounds 0.43m（局所）。Transforming after MA では `Armature/Hips`（素体）・bounds 2.0m（全身）= **素体アーマチュアへ統合済み** |
-| ②ジオメトリ整合 | **Yes。** 同点で衣装メッシュが `RETARGETED__Miltina_競泳水着` = **リターゲ適用後**。素体（`Milltina_body` 17749v / `Body` 14316v）もブレンドシェイプ込みで無傷 = 半径推定に使える |
+| ②ジオメトリ整合 | **Yes。** 同点で衣装メッシュが `RETARGETED__Miltina_競泳水着`（= MA Merge Armature 内部の `MeshRetargeter` による bind-pose 再バインド後の作業名。衣装は元から対応品で、別途のフィット/リターゲはしていない）。素体（`Milltina_body` 17749v / `Body` 14316v）もブレンドシェイプ込みで無傷 = 半径推定に使える |
 | ③トポロジ安定 | **本命スロットでは安定、Optimizing 後は崩壊。** after MA は 16 SMR・原頂点数・ブレンドシェイプ保持。PlatformFinish では AAO が **16→3 SMR**（本体+多数を `$$AAO_AUTO_MERGE_SKINNED_MESH_0` 59617v へ結合、ブレンドシェイプ凍結、メッシュ改名）。後段では手遅れ |
 
 **判断: 仮説は成立。本実装は `InPhase(BuildPhase.Transforming).AfterPlugin("nadena.dev.modular-avatar")`（MAマージ後・AAO最適化前）を基点に進める。** 確定事項と残課題:
 
 - **必ず Optimizing（AAO）より前に走る。** AAO がメッシュ結合・頂点/ブレンドシェイプ/ボーンの作り替えを行うため後段では per-garment メッシュも原トポロジも失われる。Transforming スロットは構造上 Optimizing より前なので自動的に満たす。
-- **「任意の着せ方の後」は順序依存。** 今回 `RETARGETED__` 化は after-MA 時点で完了済みだったが、リターゲ/フィットも Transforming で走る場合に堅牢にするには、本実装で**リターゲ系プラグインの後**にも順序指定する（または Transforming 後半へ）。`.AfterPlugin(MA)` だけに依存しない。
+- **`.AfterPlugin(MA)` 一つで MA のマージ＋内部 `MeshRetargeter` まで後段に来る**（`RETARGETED__` は MA 自身の merge 内部処理で、別のフィットツールではない）。標準的な MA(+AAO) 構成ではこのスロットで十分。ただし**ビルド時に走る別系統のフィット/メッシュ加工ツール**を併用する場合は、それらの後にも順序指定が要る（今回の構成には無し）。
 - 本スロットで衣装を補正すれば AAO はその補正済みメッシュを入力として最適化する（競泳水着は AAO 後も別メッシュ・同頂点数で残存 = 補正は保たれる）。
 - 副次観測: 素体メッシュが複数（`Body` / `Milltina_body`）。A改の素体自動検出は kisekae の複数ボディで誤検出しうる → `bodyMesh` 明示指定オプション（実装済み）で対処。
