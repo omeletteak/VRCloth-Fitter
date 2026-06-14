@@ -7,6 +7,14 @@
   "author": {
     "name": "omeletteak"
   },
+  "documentationUrl": "https://github.com/omeletteak/VRCloth-Fitter",
+  "keywords": [
+    "vrchat",
+    "modular-avatar",
+    "ndmf",
+    "clothing",
+    "penetration"
+  ],
   "vpmDependencies": {
     "nadena.dev.ndmf": ">=1.0.0",
     "nadena.dev.modular-avatar": ">=1.0.0"

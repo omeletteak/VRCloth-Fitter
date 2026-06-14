@@ -30,7 +30,7 @@
 - [x] リポジトリの public 化(完了済みだったが bd の表示不具合で未完了扱いになっていた — bd: 4ea は closed)
 - [x] 公開内容レビュー — docs 全体のトーンと `.beads/issues.jsonl` のノートを [docs/INFORMATION_ARCHITECTURE.md](docs/INFORMATION_ARCHITECTURE.md) §6 の規律で確認(2026-06-13 実施)。同日、炎上リスク低減のため競合の名指し解析を構造的記述へ改め、開放/閉鎖の道徳的フレームを緩和
 - [x] Runtime/Editor の asmdef 整備(Core / Runtime / Editor / Tests.Editor の4アセンブリ構成)
-- [ ] VPM パッケージ化(VRClothFitter コンポーネントの IEditorOnly 化を含む)
+- [ ] VPM パッケージ化(VRClothFitter コンポーネントの IEditorOnly 化を含む)— **下調べ済み**([docs/VPM_PACKAGING.md](docs/VPM_PACKAGING.md)): 骨格(`package.json`・asmdef 4分割)は有り。`package.json` に `documentationUrl`/`keywords` を追加済み。山場は ① Runtime の `IEditorOnly` 化(`VRCSDKBase` 参照の入れ方=SDK 除外方針との整合)② vpm-listing 配布(別リポジトリ+リリース自動化)。着手前の未決事項は同文書 §6
 - [ ] VPM リポジトリ(vpm-listing)での配布 — ALCOM / VCC どちらからも追加できる標準 VPM 形式(両者はリポジトリ設定を共有)
 
 ## フェーズ3: 品質向上
