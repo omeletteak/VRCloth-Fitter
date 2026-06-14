@@ -1,49 +1,76 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor;
 using UnityEngine;
 
 namespace VRClothFitter
 {
     /// <summary>
-    /// Writes a structured, machine-readable summary of one fitting Run to a
-    /// known file (project-root <c>vrcloth-fitter-log.json</c>), so results can
-    /// be inspected — by a human or an AI assistant — without scraping the
-    /// Unity Console.
+    /// Optional developer diagnostic log for one fitting Run. OFF by default:
+    /// the shipped tool persists nothing (No Cache, docs/DESIGN.md §5) — the
+    /// Console, the inspector verdicts and the scene-view heatmap are the
+    /// always-on feedback. A developer opts in via
+    /// <c>Tools ▸ VRCloth-Fitter ▸ Write Run Log</c> to capture runs while
+    /// calibrating the preflight thresholds or comparing collider backends.
     ///
-    /// Records aggregates only: per-capsule and per-renderer statistics, never
-    /// raw vertex positions. Nothing here can reconstruct the body shape, so it
-    /// stays within the No Cache principle (docs/DESIGN.md §5). The log is a
-    /// transient diagnostic artifact, not a cache: it is overwritten each Run.
+    /// When enabled, appends one line per run (JSONL) to a project-root
+    /// <c>vrcloth-fitter-runs.jsonl</c> so improvement can be tracked over time
+    /// without overwriting history. That file is a local, gitignored,
+    /// non-distributed dev artifact and records aggregates only — per-capsule
+    /// and per-renderer statistics, never raw vertex positions, so nothing in
+    /// it can reconstruct the body shape.
     /// </summary>
     public static class VRClothRunLog
     {
-        public const string FilePrefix = "vrcloth-fitter-log";
+        public const string FileName = "vrcloth-fitter-runs.jsonl";
+
+        const string MenuPath = "Tools/VRCloth-Fitter/Write Run Log (dev)";
+        const string EnabledKey = "VRClothFitter.WriteRunLog";
 
         /// <summary>
-        /// Project-root path (sibling of Assets/) of the latest run log for the
-        /// given avatar. The avatar name is folded into the file name so logs
-        /// from several avatars coexist instead of overwriting each other;
-        /// re-running the same avatar overwrites only its own file.
+        /// Whether runs are written to disk. False by default — opt-in, stored
+        /// per developer in EditorPrefs (not serialized into the avatar or
+        /// scene, so a distributed prefab never carries "logging on").
         /// </summary>
-        public static string FilePathFor(string avatarName)
+        public static bool Enabled
         {
-            string safe = Sanitize(avatarName);
-            string file = string.IsNullOrEmpty(safe) ? FilePrefix + ".json" : $"{FilePrefix}__{safe}.json";
-            return Path.Combine(Directory.GetParent(Application.dataPath).FullName, file);
+            get => EditorPrefs.GetBool(EnabledKey, false);
+            set => EditorPrefs.SetBool(EnabledKey, value);
         }
 
-        static string Sanitize(string name)
+        [MenuItem(MenuPath)]
+        static void ToggleEnabled() => Enabled = !Enabled;
+
+        [MenuItem(MenuPath, true)]
+        static bool ToggleEnabledValidate()
         {
-            if (string.IsNullOrEmpty(name))
+            Menu.SetChecked(MenuPath, Enabled);
+            return true;
+        }
+
+        /// <summary>Project-root path (sibling of Assets/) of the dev run log.</summary>
+        public static string FilePath()
+        {
+            return Path.Combine(Directory.GetParent(Application.dataPath).FullName, FileName);
+        }
+
+        /// <summary>
+        /// Strips a leading "Assets/" so an asset path reads from its shop
+        /// folder down (e.g. "Assets/Chocolate rice/.../Ash_Blue_1.prefab" ->
+        /// "Chocolate rice/.../Ash_Blue_1.prefab"). Pure and unit-tested.
+        /// Backslashes are normalized; paths outside Assets (e.g. "Packages/…")
+        /// are returned unchanged.
+        /// </summary>
+        public static string RelativeFromAssets(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath))
             {
                 return "";
             }
-            foreach (char c in Path.GetInvalidFileNameChars())
-            {
-                name = name.Replace(c, '_');
-            }
-            return name;
+            string p = assetPath.Replace('\\', '/');
+            const string prefix = "Assets/";
+            return p.StartsWith(prefix) ? p.Substring(prefix.Length) : p;
         }
 
         public struct SolveSummary
@@ -60,14 +87,20 @@ namespace VRClothFitter
             IReadOnlyList<BodyCapsule> capsules,
             IReadOnlyList<PenetrationHit> hits,
             IReadOnlyList<PreflightReport> reports,
-            SolveSummary solve)
+            SolveSummary solve,
+            string colliderBackend)
         {
+            if (!Enabled)
+            {
+                return; // opt-in only; by default the tool persists nothing (No Cache)
+            }
             try
             {
-                string json = JsonUtility.ToJson(BuildDto(fitter, cloth, capsules, hits, reports, solve), true);
-                string path = FilePathFor((fitter != null && fitter.targetAvatar != null) ? fitter.targetAvatar.name : "");
-                File.WriteAllText(path, json);
-                Debug.Log($"[VRClothFitter] Run log written: {path}");
+                string json = JsonUtility.ToJson(
+                    BuildDto(fitter, cloth, capsules, hits, reports, solve, colliderBackend), false);
+                string path = FilePath();
+                File.AppendAllText(path, json + "\n");
+                Debug.Log($"[VRClothFitter] Run log appended: {path}");
             }
             catch (Exception e)
             {
@@ -76,13 +109,40 @@ namespace VRClothFitter
             }
         }
 
+        /// <summary>
+        /// Source prefab path of the cloth instance in the scene, relative from
+        /// its shop folder (see <see cref="RelativeFromAssets"/>). Empty when the
+        /// cloth has been unpacked from its prefab; the caller keeps the name.
+        /// </summary>
+        static string ResolveClothPath(VRClothFitter fitter)
+        {
+            GameObject go = (fitter != null && fitter.clothRoot != null) ? fitter.clothRoot
+                : (fitter != null && fitter.clothToDeform != null ? fitter.clothToDeform.gameObject : null);
+            if (go == null)
+            {
+                return "";
+            }
+            string assetPath = "";
+            UnityEngine.Object src = PrefabUtility.GetCorrespondingObjectFromSource(go);
+            if (src != null)
+            {
+                assetPath = AssetDatabase.GetAssetPath(src);
+            }
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(go);
+            }
+            return RelativeFromAssets(assetPath);
+        }
+
         static RunLogDto BuildDto(
             VRClothFitter fitter,
             IReadOnlyList<ClothSnapshot> cloth,
             IReadOnlyList<BodyCapsule> capsules,
             IReadOnlyList<PenetrationHit> hits,
             IReadOnlyList<PreflightReport> reports,
-            SolveSummary solve)
+            SolveSummary solve,
+            string colliderBackend)
         {
             float margin = fitter != null ? fitter.margin : 0f;
 
@@ -139,10 +199,12 @@ namespace VRClothFitter
             return new RunLogDto
             {
                 timestamp = DateTime.Now.ToString("o"),
+                colliderBackend = colliderBackend ?? "",
                 avatar = (fitter != null && fitter.targetAvatar != null) ? fitter.targetAvatar.name : "",
                 sourceAvatar = (fitter != null && fitter.sourceAvatar != null) ? fitter.sourceAvatar.name : "",
                 clothRoot = (fitter != null && fitter.clothRoot != null) ? fitter.clothRoot.name
                     : (fitter != null && fitter.clothToDeform != null ? fitter.clothToDeform.name : ""),
+                clothPath = ResolveClothPath(fitter),
                 margin_m = margin,
                 totalCapsules = capsuleCount,
                 totalHits = hits != null ? hits.Count : 0,
@@ -161,11 +223,13 @@ namespace VRClothFitter
         [Serializable]
         class RunLogDto
         {
-            public string schema = "vrcloth-fitter-run/1";
+            public string schema = "vrcloth-fitter-run/2";
             public string timestamp;
+            public string colliderBackend;
             public string avatar;
             public string sourceAvatar;
             public string clothRoot;
+            public string clothPath;
             public float margin_m;
             public int totalCapsules;
             public int totalHits;

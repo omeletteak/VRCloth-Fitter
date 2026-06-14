@@ -97,7 +97,9 @@ namespace VRClothFitter
                     + ". Originals untouched; Undo (Ctrl+Z) restores.");
             }
 
-            VRClothRunLog.Write(fitter, cloth, capsules, hits, reports, solve);
+            // Backend is the bone capsule proxy today; the mesh-SDF collider
+            // spike will pass "mesh" so both can be compared in one log.
+            VRClothRunLog.Write(fitter, cloth, capsules, hits, reports, solve, "capsule");
             Debug.Log("[VRClothFitter] Process complete.");
         }
 
