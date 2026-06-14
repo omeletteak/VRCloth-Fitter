@@ -26,34 +26,27 @@ NDMF はビルドをフェーズに分けて実行する（Resolving → Generat
 ### ③ トポロジ — 後段で壊されないか
 メッシュ最適化はメッシュ結合・ブレンドシェイプ焼き込み・未使用頂点削除で頂点インデックスやトポロジを変えうる。こちらの修正が後段でも保たれるか、あるいはこちらが最適化の前で素のメッシュを触るか — 安定した前後関係が要る。
 
-## プローブ（使い捨て・1パスだけ）
+## プローブ（使い捨て・テストプロジェクトに常駐）
 
-何も変形せず**ログるだけ**の最小 NDMF プラグインを1個作る。骨子（名前空間・フェーズ名・順序指定 API はインストール済みバージョンで確認してから確定する）:
+導入済み NDMF（`Packages/nadena.dev.ndmf`）のソースを読み、API と並びを確定済み:
 
-```csharp
-// ※ NDMF の正確な API はインストール済みバージョンで確認してから確定
-class VRClothNdmfProbe : Plugin<VRClothNdmfProbe>
-{
-    protected override void Configure()
-    {
-        InPhase(BuildPhase.Transforming)
-            .AfterPlugin("nadena.dev.modular-avatar")   // ← 効くか検証する点
-            .Run("vrcloth-probe", ctx =>
-            {
-                // この瞬間に Debug.Log でダンプ:
-                //  - 現在フェーズ / 自パスの実行順
-                //  - 衣装 SkinnedMeshRenderer の bones が素体側へ付け替わっているか
-                //  - 代表頂点数点のワールド座標（= 最終フィット位置かの確認）
-                //  - 素体メッシュのブレンドシェイプ・ポーズ状態
-                //  - メッシュ最適化が既に走った形跡があるか
-            });
-    }
-}
-```
+- フェーズ順: `FirstChance → PlatformInit → Resolving → Generating → Transforming → Optimizing → PlatformFinish`
+- **MA の Merge Armature は `Transforming` フェーズで走る**（`PluginDefinition.cs` で確認）→ 仮説①の「位置」は概ね事前確定
+- MA プラグインの `QualifiedName` は `"nadena.dev.modular-avatar"`、順序指定は `Sequence.AfterPlugin(qualifiedName)`
+
+確定した最小プローブは**何も変形せず、3点でアバターのスキンメッシュをダンプ**する（1回の bake で前後比較できる）:
+
+1. `InPhase(BuildPhase.Generating)` — マージ前（baseline）
+2. `InPhase(BuildPhase.Transforming).AfterPlugin("nadena.dev.modular-avatar")` — **MA マージ後・最適化前（本命スロット）**
+3. `InPhase(BuildPhase.PlatformFinish)` — 最適化後（最終状態）
+
+各点で SMR ごとに「階層パス / 頂点数 / ブレンドシェイプ数 / ボーン数 / rootBone・bone[0] の階層パス / ワールド bounds」を出す。**ボーンの階層パス**がマージ完了の指標（衣装の bones が素体アーマチュア配下を指す）、**頂点数・SMR 数の変化**が最適化のトポロジ改変の指標。
+
+プローブは VRCloth-Fitter パッケージではなく**テストプロジェクト側**（`Assets/VRClothSpike/`、専用 Editor asmdef + 1ファイル）に置く。NDMF 依存をパッケージへ持ち込まないため。スパイク後は削除する。
 
 ## 実行手順
 
-1. **前提確認（step 0）** — テストプロジェクト（`vrcloth-fitter-test`、MA / NDMF / Avatar Optimizer 同梱）でインストール済み NDMF のバージョンと上記 API の正確な名前を確認し、プローブを確定する。
+1. **プローブ配置（実施済み）** — `vrcloth-fitter-test/Assets/VRClothSpike/` に確定版プローブ + 専用 Editor asmdef（`nadena.dev.ndmf` 参照）を配置済み。API は導入済み NDMF ソースで確認済み。
 2. テストアバター（MA 衣装 + Avatar Optimizer あり）にプローブを入れる。
 3. **Manual bake avatar**（アップロード不要・エディタ内でビルドパイプラインを実走）で焼く。
 4. Console ログを読み、①②③を判定する。
