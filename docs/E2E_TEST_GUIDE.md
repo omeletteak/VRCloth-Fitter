@@ -4,7 +4,7 @@
 
 ## 0. テストの2段階(最初に読む — 重要)
 
-VRCloth-Fitterの**本番は NDMFパス(Merge Armature 後・ビルド時)に走る**想定です(パス順序スパイク 2026-06-14 で確認済み)。一方、インスペクタの Run Fitting を**編集モードで押すとマージ前**の状態を見ます。両者は別物です:
+VRCloth-Declipperの**本番は NDMFパス(Merge Armature 後・ビルド時)に走る**想定です(パス順序スパイク 2026-06-14 で確認済み)。一方、インスペクタの Run Fitting を**編集モードで押すとマージ前**の状態を見ます。両者は別物です:
 
 - 編集モードでは衣装ボーンが素体にマージされておらず、**Merge Armature がボーンスケールで吸収するはずの体型差が未反映**(プレイモードON/Bakeで反映され、OFFで戻る)
 - そのため編集モードで見える貫通には、**マージ後に消える「偽の貫通」が混じる**(特にボーンスケール差の大きいペア)
@@ -64,7 +64,7 @@ VRCloth-Fitterの**本番は NDMFパス(Merge Armature 後・ビルド時)に走
 
 1. アバターをシーンに置く
 2. 衣装を Modular Avatar の **Setup Outfit** で着せる(衣装がアバターの子になる)
-3. 衣装ルートに **VRClothFitter** コンポーネントを付与 — Target Avatar は親をさかのぼって自動検出される(されない場合は手動で指定)
+3. 衣装ルートに **VRClothDeclipper** コンポーネントを付与 — Target Avatar は親をさかのぼって自動検出される(されない場合は手動で指定)
 4. インスペクタで **Show Scene Gizmos** を ON にし、**Preview Body Proxy** を押す
 5. **カプセルが体に沿っているかを最初に目視する。** カプセルがズレている・太すぎる・細すぎるなら、以降の検出結果は信用できない(半径ハードコードの既知の限界 — 観察結果はフェーズ3「半径自動推定」の材料として控える)
 
@@ -79,7 +79,7 @@ VRCloth-Fitterの**本番は NDMFパス(Merge Armature 後・ビルド時)に走
 - 期待値: Preflight ログが **GREEN**、`penetrating ≈ 0`
 
 ```
-[VRClothFitter] Preflight <renderer名>: GREEN — penetrating 0/8000 verts (0.0%),
+[VRClothDeclipper] Preflight <renderer名>: GREEN — penetrating 0/8000 verts (0.0%),
 max 0.0 mm below surface (0% of capsule radius), p95 0.0 mm, largest patch 0.0%, margin-zone hits 96.
 ```
 
@@ -111,14 +111,14 @@ max 0.0 mm below surface (0% of capsule radius), p95 0.0 mm, largest patch 0.0%,
 Bake 複製で、編集モードの段階1で見えていた貫通が**マージ後も残っているか**を確認する。
 
 - 衣装の SkinnedMeshRenderer を選び、シーンビューで素体との関係を目視(または手順C で Preflight を見る)
-- **マージ後も貫通が残る** → メッシュに焼き込まれた体型差。VRCloth-Fitterが直すべき**本物**。手順C へ進む
+- **マージ後も貫通が残る** → メッシュに焼き込まれた体型差。VRCloth-Declipperが直すべき**本物**。手順C へ進む
 - **マージ後に貫通が消えた/激減した** → ボーンスケール差で吸収された偽貫通。**このペアはクロステストに不適**。§1 の「メッシュに焼き込まれた差」のあるペアを選び直す
 
 ### 手順C: クロステスト本番(Bake 複製で Run)
 
-> **注意(IEditorOnly)**: `VRClothFitter` は `IEditorOnly` のため Manual Bake で**削除される**。Bake 複製の衣装には **VRClothFitter を付け直す**必要がある(これがフェーズ5 NDMFパス化=Bake工程内で自動実行、が本来の解である理由)。
+> **注意(IEditorOnly)**: `VRClothDeclipper` は `IEditorOnly` のため Manual Bake で**削除される**。Bake 複製の衣装には **VRClothDeclipper を付け直す**必要がある(これがフェーズ5 NDMFパス化=Bake工程内で自動実行、が本来の解である理由)。
 
-1. Bake 複製の衣装ルートに **VRClothFitter を付け直す**(Target は複製アバターを指す)。Use Mesh SDF Collider = ON
+1. Bake 複製の衣装ルートに **VRClothDeclipper を付け直す**(Target は複製アバターを指す)。Use Mesh SDF Collider = ON
 2. Run 前にシーンビューのヒートマップで貫通箇所を目視(どこが光るか)
 3. **Run Fitting**
 4. ログの確認:
@@ -136,7 +136,7 @@ Bake 複製で、編集モードの段階1で見えていた貫通が**マージ
 
 > Bake 複製は毎回作り直せばクリーンな初期状態になる(段階1の「シーン再オープン」に相当)。これを使って同一条件で比較する。
 
-1. Bake 複製を作り、VRClothFitter を付け直し、**Use Projected Solver = OFF**(coarse)で Run。ログの **`Detected N penetrating vertices`(初期検出数 N)**、`finished after P pass(es); M vertices still penetrating` の **M**、所要時間(体感)を控える。スクショ
+1. Bake 複製を作り、VRClothDeclipper を付け直し、**Use Projected Solver = OFF**(coarse)で Run。ログの **`Detected N penetrating vertices`(初期検出数 N)**、`finished after P pass(es); M vertices still penetrating` の **M**、所要時間(体感)を控える。スクショ
 2. Bake 複製を**作り直す**(または別の Bake 複製で)。**Use Projected Solver = ON**(projected)で Run
 3. **公平性チェック(必須)**: projected 側の **初期検出数 `Detected …` が手順1の N と一致**することを最初に確認。一致しなければ初期状態が違う(別 Bake/別状態)ので作り直してやり直す。一致して初めて比較成立
 4. 比較の観点(**パス数は直接比較しない** — coarse は収束で決まる適応値〈最大 `maxPasses`〉、projected は固定反復数〈`iterations`〉で意味が違う。残留貫通=0 を両者が満たした上で質で比べる):
@@ -194,5 +194,5 @@ Bake 複製で、編集モードの段階1で見えていた貫通が**マージ
 | Run しても何も変わらない | 検出 0 件なら正常。ログの Detected 行を確認 |
 | coarse と projected で初期検出数が違う | 前の Run の適用が残っている。Bake 複製を作り直してから比較(手順D-3) |
 | マージ後に貫通が消える | ボーンスケール差で吸収された偽貫通。メッシュに差が焼き込まれたペアを選び直す(手順B) |
-| Bake 複製に VRClothFitter が無い | `IEditorOnly` のため Bake で削除される。複製の衣装に付け直す(手順C) |
+| Bake 複製に VRClothDeclipper が無い | `IEditorOnly` のため Bake で削除される。複製の衣装に付け直す(手順C) |
 | 適用後に全体が二重に膨らんで崩れる | 衣装側シェイプキーが非0(Blendshape Sync で素体に追従)。適用の二重適用による既知制約(フェーズ3)。適用の見た目を見るなら素体シェイプキーを0にしてから Run(§1.1) |

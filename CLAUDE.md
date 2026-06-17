@@ -64,17 +64,17 @@ Unity 2022.3.22f1 の EditMode テストをバッチモードで実行する(Uni
 
 - 終了コード: 0=全件成功 / 2=テスト失敗あり / それ以外=コンパイルエラー等(ログを確認)
 - 失敗の詳細は結果 XML の `//test-case[@result='Failed']`、コンパイルエラーはログの `error CS` を見る
-- `-testFilter "VRClothFitter.Tests.クラス名"` で絞り込み実行できる
+- `-testFilter "VRClothDeclipper.Tests.クラス名"` で絞り込み実行できる
 
 実機での目視 E2E テストの手順は [docs/E2E_TEST_GUIDE.md](docs/E2E_TEST_GUIDE.md)(ユーザーが GUI で実施。エージェントは実行できない)。
 
 ## Architecture Overview
 
-VRChat アバター衣装の貫通自動修正を行う Unity エディタ拡張。4アセンブリ構成(すべて `Assets/VRCloth-Fitter/` 配下):
+VRChat アバター衣装の貫通自動修正を行う Unity エディタ拡張。4アセンブリ構成(すべて `Assets/VRCloth-Declipper/` 配下):
 
-- **Core**(`VRClothFitter.Core`)— エディタ非依存の幾何計算。カプセル距離・貫通検出・押し出し・Laplacian 平滑化・スキニング数学(`SkinningMath`)
-- **Runtime**(`VRClothFitter.Runtime`)— シーンに置く `VRClothFitter` コンポーネント(設定の入れ物)のみ
-- **Editor**(`VRClothFitter.Editor`)— パイプライン本体。`VRClothPipeline.Run()` が キャプチャ(`BakeMesh`)→ Humanoid ボーンからカプセル生成 → `PenetrationSolver`(押し出し+平滑化の反復)→ 逆スキニングでメッシュ複製へ書き戻し(`VRClothMeshApplier`)。シーンビュー可視化とインスペクタ GUI もこの層
+- **Core**(`VRClothDeclipper.Core`)— エディタ非依存の幾何計算。カプセル距離・貫通検出・押し出し・Laplacian 平滑化・スキニング数学(`SkinningMath`)
+- **Runtime**(`VRClothDeclipper.Runtime`)— シーンに置く `VRClothDeclipper` コンポーネント(設定の入れ物)のみ
+- **Editor**(`VRClothDeclipper.Editor`)— パイプライン本体。`VRClothPipeline.Run()` が キャプチャ(`BakeMesh`)→ Humanoid ボーンからカプセル生成 → `PenetrationSolver`(押し出し+平滑化の反復)→ 逆スキニングでメッシュ複製へ書き戻し(`VRClothMeshApplier`)。シーンビュー可視化とインスペクタ GUI もこの層
 - **Tests.Editor** — EditMode テスト(Core 直叩き+実 SkinnedMeshRenderer でのラウンドトリップ)
 
 座標規約: キャプチャは `BakeMesh(useScale: false)` + `TRS(position, rotation, scale=1)` でワールド化し、書き戻しはブレンドスキン行列の逆行列で戻す(`SkinnedRoundTripTests` がこの整合を Unity 実スキニングと突き合わせて検証)。

@@ -1,0 +1,19 @@
+{
+    "name": "VRClothDeclipper.Editor",
+    "rootNamespace": "",
+    "references": [
+        "VRClothDeclipper.Core",
+        "VRClothDeclipper.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,10 +1,10 @@
-# VRCloth-Fitter 設計ドキュメント
+# VRCloth-Declipper 設計ドキュメント
 
-このドキュメントは、VRCloth-Fitter の設計判断とその背景(競合分析・プライバシー所見)を記録します。最終更新: 2026-06。
+このドキュメントは、VRCloth-Declipper の設計判断とその背景(競合分析・プライバシー所見)を記録します。最終更新: 2026-06。
 
 ## 1. プロジェクトの目的
 
-VRCloth-Fitter の目的は、**衣装フィッティング領域にオープンソースの実装が存在すること**です。収益は目的ではありません。
+VRCloth-Declipper の目的は、**衣装フィッティング領域にオープンソースの実装が存在すること**です。収益は目的ではありません。
 
 VRChat の改変エコシステムでは、Modular Avatar・NDMF・Avatar Optimizer といった基盤ツールがオープンソース(MIT)でインフラとして機能しています。衣装フィッティング(体型変換・貫通修正)はいまのところ有料ツールが担っており、ここにも**中身を検証でき、作者の活動が止まっても使い続けられる**オープンな選択肢が一つあってよい — それが本プロジェクトの動機です。オープンであること自体が、後述する No Cache 原則をコードで検証可能にする手段でもあります。
 
@@ -12,13 +12,13 @@ VRChat の改変エコシステムでは、Modular Avatar・NDMF・Avatar Optimi
 
 Modular Avatar の Merge Armature(Setup Outfit)は骨格を揃えてくれますが、素体と衣装の体型の差までは吸収しません。結果として、対応衣装ですら着せた後に素体が衣装を突き抜ける「貫通」が残り、ユーザーはシェイプキー調整・メッシュ削除・Blender での手修正でしのいでいます。
 
-VRCloth-Fitter はここを自動化します。**どの方法で着せたかは問いません** — 対応衣装の手動着せ替えでも、変換ツールが出力した衣装でも、着せ終わった状態に対する後処理として機能します。
+VRCloth-Declipper はここを自動化します。**どの方法で着せたかは問いません** — 対応衣装の手動着せ替えでも、変換ツールが出力した衣装でも、着せ終わった状態に対する後処理として機能します。
 
 どこまでの体型差を「貫通修正」として扱うか(どこからがリターゲティングか)の定量的な線引きは第9節で定義します。
 
 ## 3. 競合分析(2026-06 時点)
 
-| | もちふぃった～ | Alterith | VRCloth-Fitter |
+| | もちふぃった～ | Alterith | VRCloth-Declipper |
 |---|---|---|---|
 | 価格/ライセンス | ¥2,500・ソース非公開(Blender アドオンは GPL-3.0) | ¥3,000・再配布不可 | 無料・MIT(ソース公開) |
 | 担当領域 | 体型変換(リターゲティング) | 体型変換(リターゲティング) | **貫通修正(後処理)** |
@@ -42,7 +42,7 @@ VRCloth-Fitter はここを自動化します。**どの方法で着せたかは
 
 ## 5. 設計原則: No Cache
 
-上記の教訓から、VRCloth-Fitter は次を原則とします。
+上記の教訓から、VRCloth-Declipper は次を原則とします。
 
 > **アバター素体形状を復元しうるデータを、ディスクに保存せず、ツールの外に出さない。**
 
@@ -101,19 +101,19 @@ VRCloth-Fitter はここを自動化します。**どの方法で着せたかは
 
 **コード配置:**
 
-- `Assets/VRCloth-Fitter/Core/` — 純粋な数学・型(`BodyCapsule`、`PenetrationHit`)。asmdef 化済みで EditMode テストの対象
-- `Assets/VRCloth-Fitter/Editor/` — パイプライン、インスペクタ、シーンビュー可視化(`VRClothDebugVisualizer`)
-- `Assets/VRCloth-Fitter/Runtime/` — アバターに付くコンポーネント(`VRClothFitter` など)
-- `Assets/VRCloth-Fitter/Tests/` — EditMode テスト
+- `Assets/VRCloth-Declipper/Core/` — 純粋な数学・型(`BodyCapsule`、`PenetrationHit`)。asmdef 化済みで EditMode テストの対象
+- `Assets/VRCloth-Declipper/Editor/` — パイプライン、インスペクタ、シーンビュー可視化(`VRClothDebugVisualizer`)
+- `Assets/VRCloth-Declipper/Runtime/` — アバターに付くコンポーネント(`VRClothDeclipper` など)
+- `Assets/VRCloth-Declipper/Tests/` — EditMode テスト
 
 可視化(カプセルのワイヤ表示・侵入頂点の深度ヒートマップ)もセッション内メモリのみで動作し、何も保存しません。
 
 ## 7. 配布形態と開発環境
 
-- 配布単位は `Assets/VRCloth-Fitter/` フォルダ(VPM パッケージ)。**リポジトリ全体を他プロジェクトへコピーしてはいけません**(VRChat SDK が二重になる)
+- 配布単位は `Assets/VRCloth-Declipper/` フォルダ(VPM パッケージ)。**リポジトリ全体を他プロジェクトへコピーしてはいけません**(VRChat SDK が二重になる)
 - 配布は標準 VPM リポジトリ形式を予定。日本語圏では VCC 代替の [ALCOM](https://vrc-get.anatawa12.com/ja/alcom/)(vrc-get ベース)が主流だが、ALCOM と VCC は VPM リポジトリ設定を共有するため、同一の配布で両方の利用者に対応できる
 - リポジトリは SDK 等の再配布禁止物を含みません(git 履歴からも除去済み)。クローン後は `vrc-get resolve` か ALCOM / VCC で依存を復元
-- 別プロジェクトでのテストはジャンクション推奨: `New-Item -ItemType Junction -Path <テスト側>/Assets/VRCloth-Fitter -Target <クローン側>/Assets/VRCloth-Fitter`
+- 別プロジェクトでのテストはジャンクション推奨: `New-Item -ItemType Junction -Path <テスト側>/Assets/VRCloth-Declipper -Target <クローン側>/Assets/VRCloth-Declipper`
 - 将来の VPM 配布には Runtime/Editor の asmdef 整備が必要(パッケージ内の asmdef なしコードはコンパイルされないため)。それまでは Assets 内設置のみサポート
 
 ## 8. 凍結した構想(旧 FUTURE_PLANS.md)

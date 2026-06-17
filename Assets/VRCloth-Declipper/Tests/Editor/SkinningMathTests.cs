@@ -1,0 +1,103 @@
+using NUnit.Framework;
+using UnityEngine;
+
+namespace VRClothDeclipper.Tests
+{
+    public class SkinningMathTests
+    {
+        const float Eps = 1e-4f;
+
+        static Matrix4x4[] TwoBones()
+        {
+            return new[]
+            {
+                Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(0f, 0f, 30f), Vector3.one),
+                Matrix4x4.TRS(new Vector3(0.5f, 0f, 0f), Quaternion.Euler(0f, 45f, 0f), Vector3.one * 1.2f),
+            };
+        }
+
+        static Matrix4x4[] TwoBindPoses()
+        {
+            return new[]
+            {
+                Matrix4x4.TRS(new Vector3(0f, -0.5f, 0f), Quaternion.identity, Vector3.one),
+                Matrix4x4.TRS(new Vector3(0.1f, 0f, 0f), Quaternion.Euler(10f, 0f, 0f), Vector3.one),
+            };
+        }
+
+        [Test]
+        public void BlendedSkinMatrix_SingleBone_IsBoneTimesBindPose()
+        {
+            var bones = TwoBones();
+            var binds = TwoBindPoses();
+            var weight = new BoneWeight { boneIndex0 = 1, weight0 = 1f };
+
+            Matrix4x4 blended = SkinningMath.BlendedSkinMatrix(weight, bones, binds);
+            Matrix4x4 expected = bones[1] * binds[1];
+
+            for (int i = 0; i < 16; i++)
+            {
+                Assert.AreEqual(expected[i], blended[i], Eps, $"component {i}");
+            }
+        }
+
+        [Test]
+        public void WorldToMeshLocal_InvertsForwardSkinning()
+        {
+            var bones = TwoBones();
+            var binds = TwoBindPoses();
+            var weights = new[]
+            {
+                new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                new BoneWeight { boneIndex0 = 0, weight0 = 0.3f, boneIndex1 = 1, weight1 = 0.7f },
+                new BoneWeight { boneIndex0 = 1, weight0 = 1f },
+            };
+            var locals = new[]
+            {
+                new Vector3(0.1f, 0.2f, 0.3f),
+                new Vector3(-0.2f, 0.5f, 0f),
+                new Vector3(0f, 0.05f, -0.4f),
+            };
+
+            var world = new Vector3[locals.Length];
+            for (int v = 0; v < locals.Length; v++)
+            {
+                world[v] = SkinningMath.BlendedSkinMatrix(weights[v], bones, binds).MultiplyPoint3x4(locals[v]);
+            }
+
+            var roundTripped = SkinningMath.WorldToMeshLocal(world, weights, bones, binds, Matrix4x4.identity);
+
+            for (int v = 0; v < locals.Length; v++)
+            {
+                Assert.AreEqual(locals[v].x, roundTripped[v].x, Eps, $"x of vertex {v}");
+                Assert.AreEqual(locals[v].y, roundTripped[v].y, Eps, $"y of vertex {v}");
+                Assert.AreEqual(locals[v].z, roundTripped[v].z, Eps, $"z of vertex {v}");
+            }
+        }
+
+        [Test]
+        public void WorldToMeshLocal_WithoutWeights_FallsBackToRendererMatrix()
+        {
+            var world = new[] { new Vector3(2f, 1f, 0f) };
+            Matrix4x4 rendererWorldToLocal = Matrix4x4.TRS(new Vector3(1f, 0f, 0f), Quaternion.identity, Vector3.one).inverse;
+
+            var local = SkinningMath.WorldToMeshLocal(world, null, null, null, rendererWorldToLocal);
+
+            Assert.AreEqual(1f, local[0].x, Eps);
+            Assert.AreEqual(1f, local[0].y, Eps);
+            Assert.AreEqual(0f, local[0].z, Eps);
+        }
+
+        [Test]
+        public void WorldToMeshLocal_ZeroTotalWeight_FallsBackToRendererMatrix()
+        {
+            var world = new[] { new Vector3(2f, 1f, 0f) };
+            var weights = new[] { new BoneWeight() }; // all weights zero
+            Matrix4x4 rendererWorldToLocal = Matrix4x4.TRS(new Vector3(1f, 0f, 0f), Quaternion.identity, Vector3.one).inverse;
+
+            var local = SkinningMath.WorldToMeshLocal(world, weights, TwoBones(), TwoBindPoses(), rendererWorldToLocal);
+
+            Assert.AreEqual(1f, local[0].x, Eps);
+        }
+    }
+}

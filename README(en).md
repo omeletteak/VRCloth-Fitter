@@ -1,4 +1,4 @@
-# VRCloth-Fitter
+# VRCloth-Declipper
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Unity](https://img.shields.io/badge/Unity-2022.3-blue.svg)](#requirements)
@@ -8,7 +8,7 @@
 
 **An open-source Unity editor tool that automatically fixes body-through-clothing clipping left after dressing an avatar.**
 
-Even after you fit an outfit with Modular Avatar's Merge Armature (Setup Outfit), differences in body shape leave the body poking through the clothing — "penetration." VRCloth-Fitter fixes this automatically with a detect → push-out → Laplacian-smoothing pipeline.
+Even after you fit an outfit with Modular Avatar's Merge Armature (Setup Outfit), differences in body shape leave the body poking through the clothing — "penetration." VRCloth-Declipper fixes this automatically with a detect → push-out → Laplacian-smoothing pipeline.
 
 ## What it does / doesn't do
 
@@ -20,14 +20,14 @@ Even after you fit an outfit with Modular Avatar's Merge Armature (Setup Outfit)
 
 **Doesn't:**
 
-- Retarget unsupported outfits to a different body shape — that is the domain of conversion tools such as [もちふぃった～](https://booth.pm/ja/items/7657840) and [Alterith](https://booth.pm/ja/items/7131644). VRCloth-Fitter complements them by handling the **stage after** conversion (none of those tools address penetration)
+- Retarget unsupported outfits to a different body shape — that is the domain of conversion tools such as [もちふぃった～](https://booth.pm/ja/items/7657840) and [Alterith](https://booth.pm/ja/items/7131644). VRCloth-Declipper complements them by handling the **stage after** conversion (none of those tools address penetration)
 - Save or export avatar shape data (see the design principle below)
 
 ## Design principle: No Cache
 
 **No data that could reconstruct an avatar's body shape is written to disk or sent outside the tool.**
 
-The higher its resolution, the more a body-shape difference can reconstruct the original avatar's body, which collides with avatar terms of use and authors' rights. VRCloth-Fitter computes each penetration fix in memory, applies it on the spot, and keeps no shape-derived intermediate data. Being open source is also a way to make this promise verifiable in code.
+The higher its resolution, the more a body-shape difference can reconstruct the original avatar's body, which collides with avatar terms of use and authors' rights. VRCloth-Declipper computes each penetration fix in memory, applies it on the spot, and keeps no shape-derived intermediate data. Being open source is also a way to make this promise verifiable in code.
 
 For the full background and the relationship to prior tools, see [docs/DESIGN.md](docs/DESIGN.md) (Japanese).
 
@@ -60,8 +60,8 @@ For the full background and the relationship to prior tools, see [docs/DESIGN.md
 There is no distribution package yet. For now, clone the repository:
 
 ```powershell
-git clone https://github.com/omeletteak/VRCloth-Fitter.git
-cd VRCloth-Fitter
+git clone https://github.com/omeletteak/VRCloth-Declipper.git
+cd VRCloth-Declipper
 vrc-get resolve   # or open in ALCOM / VCC to resolve dependencies (the VRChat SDK etc. are not bundled)
 ```
 
@@ -69,11 +69,11 @@ To try it in another VPM project, junction-link only the package folder (do not 
 
 ```powershell
 New-Item -ItemType Junction `
-  -Path "<test project>\Assets\VRCloth-Fitter" `
-  -Target "<clone path>\Assets\VRCloth-Fitter"
+  -Path "<test project>\Assets\VRCloth-Declipper" `
+  -Target "<clone path>\Assets\VRCloth-Declipper"
 ```
 
-Usage: after fitting an outfit with Modular Avatar's Setup Outfit, add the `VRClothFitter` component to the outfit GameObject; it auto-detects the outfit mesh and the parent avatar. Use **Preview Body Proxy** in the inspector to show the proxy in the scene view, then **Run Fitting** to fix penetration (non-destructive; Undo restores). For a more accurate body, enable **Use Mesh SDF Collider** to collide against a signed-distance field built from the body mesh instead of bone capsules (see [docs/DESIGN.md](docs/DESIGN.md) §6, Japanese).
+Usage: after fitting an outfit with Modular Avatar's Setup Outfit, add the `VRClothDeclipper` component to the outfit GameObject; it auto-detects the outfit mesh and the parent avatar. Use **Preview Body Proxy** in the inspector to show the proxy in the scene view, then **Run Fitting** to fix penetration (non-destructive; Undo restores). For a more accurate body, enable **Use Mesh SDF Collider** to collide against a signed-distance field built from the body mesh instead of bone capsules (see [docs/DESIGN.md](docs/DESIGN.md) §6, Japanese).
 
 ## Contributing
 

@@ -4,7 +4,7 @@
 
 ## 目的
 
-VRCloth-Fitter の製品形態は「ビルド時に走り、**どんな着せ方の後でも**残った貫通を直す NDMF パス」を想定している（[ROADMAP](../ROADMAP.md) フェーズ5、[ECOSYSTEM_VISION](ECOSYSTEM_VISION.md)）。この「後段に挿せば全部に効く」という前提は、NDMF のビルドパイプライン上で**自分のパスを正しい位置に・安定して置けること**に全面的に乗っている。本スパイクは、本実装に着手する前に、その前提を実機ビルドで確認するためのもの。数時間の使い捨て実験で前提を固めてから本パスを建てる ↔ 潰さず本実装してズレ発覚で作り直し、の差を消す。
+VRCloth-Declipper の製品形態は「ビルド時に走り、**どんな着せ方の後でも**残った貫通を直す NDMF パス」を想定している（[ROADMAP](../ROADMAP.md) フェーズ5、[ECOSYSTEM_VISION](ECOSYSTEM_VISION.md)）。この「後段に挿せば全部に効く」という前提は、NDMF のビルドパイプライン上で**自分のパスを正しい位置に・安定して置けること**に全面的に乗っている。本スパイクは、本実装に着手する前に、その前提を実機ビルドで確認するためのもの。数時間の使い捨て実験で前提を固めてから本パスを建てる ↔ 潰さず本実装してズレ発覚で作り直し、の差を消す。
 
 ## なぜビルド時でなければならないか
 
@@ -15,7 +15,7 @@ VRCloth-Fitter の製品形態は「ビルド時に走り、**どんな着せ方
 ## 確かめる3点
 
 ### ① 位置 — どのフェーズ・どの順で走るか
-NDMF はビルドをフェーズに分けて実行する（Resolving → Generating → Transforming → Optimizing、※正確な区切りは実物で確認）。骨格マージは Transforming 付近、メッシュ最適化（Avatar Optimizer 等）は Optimizing 付近と見込まれる。VRCloth-Fitter のパスは「**骨格マージの後・メッシュ最適化の前**」に入りたい。NDMF の順序指定（AfterPlugin / BeforePlugin 等）が実際に効き、毎ビルド安定するかを確認する。
+NDMF はビルドをフェーズに分けて実行する（Resolving → Generating → Transforming → Optimizing、※正確な区切りは実物で確認）。骨格マージは Transforming 付近、メッシュ最適化（Avatar Optimizer 等）は Optimizing 付近と見込まれる。VRCloth-Declipper のパスは「**骨格マージの後・メッシュ最適化の前**」に入りたい。NDMF の順序指定（AfterPlugin / BeforePlugin 等）が実際に効き、毎ビルド安定するかを確認する。
 
 ### ② 状態 — その瞬間のジオメトリは想定通りか
 ビルド時のアバターは基本ビルド姿勢（レスト/T）・ブレンドシェイプ既定値。コアは現在ポーズの頂点で検出・半径推定する。パス実行時点で次を確認する。
@@ -42,13 +42,13 @@ NDMF はビルドをフェーズに分けて実行する（Resolving → Generat
 
 各点で SMR ごとに「階層パス / 頂点数 / ブレンドシェイプ数 / ボーン数 / rootBone・bone[0] の階層パス / ワールド bounds」を記録する。**ボーンの階層パス**がマージ完了の指標（衣装の bones が素体アーマチュア配下を指す）、**頂点数・SMR 数の変化**が最適化のトポロジ改変の指標。
 
-出力は project ルートの **`vrcloth-ndmf-probe.json`**（3点のスナップショットを1ファイルに集約）に書く。Console コピペでなくこの JSON を直接読んで判定する（[VRClothRunLog](../Assets/VRCloth-Fitter/Editor/VRClothRunLog.cs) と同じ「AI が読める場所に出す」方針）。Console には各点1行の確認ログ（フェーズ・SMR 数・出力パス）のみ。
+出力は project ルートの **`vrcloth-ndmf-probe.json`**（3点のスナップショットを1ファイルに集約）に書く。Console コピペでなくこの JSON を直接読んで判定する（[VRClothRunLog](../Assets/VRCloth-Declipper/Editor/VRClothRunLog.cs) と同じ「AI が読める場所に出す」方針）。Console には各点1行の確認ログ（フェーズ・SMR 数・出力パス）のみ。
 
-プローブは VRCloth-Fitter パッケージではなく**テストプロジェクト側**（`Assets/VRClothSpike/`、専用 Editor asmdef + 1ファイル）に置く。NDMF 依存をパッケージへ持ち込まないため。スパイク後は削除する。
+プローブは VRCloth-Declipper パッケージではなく**テストプロジェクト側**（`Assets/VRClothSpike/`、専用 Editor asmdef + 1ファイル）に置く。NDMF 依存をパッケージへ持ち込まないため。スパイク後は削除する。
 
 ## 実行手順
 
-1. **プローブ配置（実施済み）** — `vrcloth-fitter-test/Assets/VRClothSpike/` に確定版プローブ + 専用 Editor asmdef（`nadena.dev.ndmf` 参照）を配置済み。API は導入済み NDMF ソースで確認済み。
+1. **プローブ配置（実施済み）** — `vrcloth-declipper-test/Assets/VRClothSpike/` に確定版プローブ + 専用 Editor asmdef（`nadena.dev.ndmf` 参照）を配置済み。API は導入済み NDMF ソースで確認済み。
 2. テストアバター（MA 衣装 + Avatar Optimizer あり）にプローブを入れる。
 3. **Manual bake avatar**（アップロード不要・エディタ内でビルドパイプラインを実走）で焼く。
 4. プローブが project ルートに `vrcloth-ndmf-probe.json`（3点の SMR スナップショット）を書く。これを読んで①②③を判定する。

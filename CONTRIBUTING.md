@@ -1,6 +1,6 @@
-# Contributing to VRCloth-Fitter
+# Contributing to VRCloth-Declipper
 
-Thank you for your interest in contributing to VRCloth-Fitter! We welcome bug reports, feature requests, and pull requests.
+Thank you for your interest in contributing to VRCloth-Declipper! We welcome bug reports, feature requests, and pull requests.
 
 ## Development Environment Setup
 
@@ -24,11 +24,11 @@ Please follow the existing coding style for consistency. Key points include:
 
 ## Project Structure
 
--   **`/Assets/VRCloth-Fitter/Core`**: Pure C# math and data types (e.g., `BodyCapsule`, `PenetrationHit`) with no scene dependencies. Covered by EditMode tests.
--   **`/Assets/VRCloth-Fitter/Runtime`**: Contains `MonoBehaviour` components that are attached to GameObjects (e.g., `VRClothFitter.cs`). These hold the data.
--   **`/Assets/VRCloth-Fitter/Editor`**: Contains `Editor` scripts: custom inspectors, the fitting pipeline, and scene-view visualization.
--   **`/Assets/VRCloth-Fitter/Tests`**: EditMode tests.
--   **`/Assets/VRCloth-Fitter/Scripts`**: Miscellaneous scripts pending reorganization into the folders above.
+-   **`/Assets/VRCloth-Declipper/Core`**: Pure C# math and data types (e.g., `BodyCapsule`, `PenetrationHit`) with no scene dependencies. Covered by EditMode tests.
+-   **`/Assets/VRCloth-Declipper/Runtime`**: Contains `MonoBehaviour` components that are attached to GameObjects (e.g., `VRClothDeclipper.cs`). These hold the data.
+-   **`/Assets/VRCloth-Declipper/Editor`**: Contains `Editor` scripts: custom inspectors, the fitting pipeline, and scene-view visualization.
+-   **`/Assets/VRCloth-Declipper/Tests`**: EditMode tests.
+-   **`/Assets/VRCloth-Declipper/Scripts`**: Miscellaneous scripts pending reorganization into the folders above.
 
 See [docs/DESIGN.md](docs/DESIGN.md) for the design rationale — in particular the **No Cache** principle (never persist or export data that could reconstruct an avatar's body shape), which all contributions must respect.
 
