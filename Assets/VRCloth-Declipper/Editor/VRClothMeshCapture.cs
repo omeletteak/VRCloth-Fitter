@@ -18,6 +18,16 @@ namespace VRClothDeclipper
         public Vector3[] worldVertices;
 
         /// <summary>
+        /// The captured world positions <em>before</em> any solving. The solver
+        /// overwrites <see cref="worldVertices"/> in place, so this untouched
+        /// copy is kept to recover the fitting delta (worldVertices minus
+        /// bakedWorld) at apply time, which is written as a delta on the mesh's
+        /// base vertices rather than replacing them. See
+        /// <see cref="VRClothMeshApplier"/>.
+        /// </summary>
+        public Vector3[] bakedWorld;
+
+        /// <summary>
         /// Triangle index list of the baked mesh, kept so the smoothing stage
         /// can build vertex adjacency without re-baking.
         /// </summary>
@@ -83,6 +93,7 @@ namespace VRClothDeclipper
                 {
                     renderer = renderer,
                     worldVertices = vertices,
+                    bakedWorld = (Vector3[])vertices.Clone(),
                     triangles = baked.triangles,
                 };
             }

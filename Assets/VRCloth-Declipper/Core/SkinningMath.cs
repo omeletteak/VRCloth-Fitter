@@ -71,5 +71,54 @@ namespace VRClothDeclipper
             }
             return local;
         }
+
+        /// <summary>
+        /// Writes a fitting correction back as a <em>delta</em> on the mesh's
+        /// own base vertices instead of replacing them. For each vertex the
+        /// world-space correction (<paramref name="fittedWorld"/> minus
+        /// <paramref name="originalWorld"/>) is inverse-skinned into mesh-local
+        /// space and added to <paramref name="baseVertices"/>.
+        ///
+        /// This is what keeps blendshapes correct. Replacing a vertex with the
+        /// inverse-skinned <i>baked</i> position folds the current shape-key
+        /// displacement (driven non-zero by Modular Avatar's Blendshape Sync)
+        /// into the base, and the renderer then adds the blendshape again at
+        /// runtime — a double-apply. Adding only the delta leaves the base
+        /// shape-key-free, so each blendshape contributes exactly once. Both
+        /// worlds are inverse-skinned through the same per-vertex matrix (or the
+        /// same fallback), so the subtraction cancels the shape-key part and
+        /// leaves the pure correction. See docs/ROADMAP.md phase 3.
+        /// </summary>
+        public static Vector3[] WorldDeltaToMeshLocal(
+            IReadOnlyList<Vector3> baseVertices,
+            IReadOnlyList<Vector3> originalWorld,
+            IReadOnlyList<Vector3> fittedWorld,
+            BoneWeight[] weights,
+            Matrix4x4[] boneToWorld,
+            Matrix4x4[] bindPoses,
+            Matrix4x4 rendererWorldToLocal)
+        {
+            int count = baseVertices != null ? baseVertices.Count : 0;
+            var local = new Vector3[count];
+            // Without a matching before/after pair there is no delta to add;
+            // fall back to the untouched base vertices.
+            if (originalWorld == null || fittedWorld == null
+                || originalWorld.Count != count || fittedWorld.Count != count)
+            {
+                for (int v = 0; v < count; v++)
+                {
+                    local[v] = baseVertices[v];
+                }
+                return local;
+            }
+
+            var localOriginal = WorldToMeshLocal(originalWorld, weights, boneToWorld, bindPoses, rendererWorldToLocal);
+            var localFitted = WorldToMeshLocal(fittedWorld, weights, boneToWorld, bindPoses, rendererWorldToLocal);
+            for (int v = 0; v < count; v++)
+            {
+                local[v] = baseVertices[v] + (localFitted[v] - localOriginal[v]);
+            }
+            return local;
+        }
     }
 }
