@@ -1,6 +1,6 @@
 # E2E 目視テスト手順
 
-実アバター+衣装で貫通修正パイプラインを通し確認するための手順書です。フェーズ1(ROADMAP)の完成判定に使います。自動テスト(EditMode)の実行方法は [CLAUDE.md](../CLAUDE.md) を、サポート範囲の定義は [DESIGN.md](DESIGN.md) 第9節を参照。最終更新: 2026-06-15。
+実アバター+衣装で貫通修正パイプラインを通し確認するための手順書です。フェーズ1(ROADMAP)の完成判定に使います。自動テスト(EditMode)の実行方法は [CLAUDE.md](../CLAUDE.md) を、サポート範囲の定義は [DESIGN.md](DESIGN.md) 第9節を参照。最終更新: 2026-06-17。
 
 ## 0. 前提と事前チェック
 
@@ -86,6 +86,22 @@ max 0.0 mm below surface (0% of capsule radius), p95 0.0 mm, largest patch 0.0%,
    - ※適用後メッシュを見る評価なので、§0.1 に従い**素体シェイプキーを 0 にして二重適用を避けた状態**で行う
 5. **Before/After のスクリーンショット**を撮る(受け入れ基準)
 
+### 手順1b: ソルバ比較(プロトタイプ — Projected Solver)
+
+同じクロス着せ替えの状態で、現行ソルバ(**coarse**)と試作の法線/接線分解ソルバ(**projected**)を切り替えて比較する。projected は平滑化1ステップごとに侵入頂点をマージン面へ再投影して再沈み込みを防ぐ設計で、λ/パス数のチューニング不要を狙う([DEFORMATION_METHODS.md](DEFORMATION_METHODS.md) §3.1)。既定は **OFF(coarse)**。
+
+> **前提**: この比較は**貫通が実際に出るクロス着せ替え(手順1)でのみ意味がある**。ヌルテスト(手順0)は理想的に検出ゼロでソルバが一度も実行されない(パイプラインは `hits.Count > 0` のときだけソルバを呼ぶ)ため、両ソルバの差は出ない。ヌルテストの合否は検出側で見るもので、ソルバ評価は本手順で行う。
+
+1. **Use Projected Solver (Prototype)** を **OFF** のまま Run Fitting(= coarse)。ログ `... finished after N pass(es) (coarse solver); M vertices still penetrating` の **N(パス数)・M(残留貫通)** と、所要時間(体感)を控える。Before/After スクショを撮る
+2. **Ctrl+Z** で元に戻す(§4)
+3. **Use Projected Solver (Prototype)** を **ON** にして Run Fitting(= projected)。ログが **`(projected solver)`** になっていることを確認し、同じ項目を控える
+4. 比較の観点:
+   - **残留貫通(M)** — どちらも 0 が期待値。projected で 0 にならない箇所があれば位置と数値を控える
+   - **段差・膨らみ** — 押し出し境界の馴染みが projected で改善するか(本命の差。肌見せ境界×関節を重点的に)
+   - **ディテール保持** — しわ・プリーツが潰れていないか(両者とも変位場方式)
+   - **所要時間** — projected は毎反復で全頂点を再スキャンするため検出呼び出しが coarse より多い。実メッシュで体感差が出るか
+5. 所見は ROADMAP フェーズ3 / [DEFORMATION_METHODS.md](DEFORMATION_METHODS.md) §3.1 へフィードバックする。**projected を既定化(現行 `Solve` の置き換え)するか、`iterations` を露出するか**の判断材料になる
+
 ## 4. 非破壊と Undo の確認
 
 - **Ctrl+Z** で元のメッシュ参照に戻ること(Run 1回分の適用は一手で戻るはず。分かれる場合は数回)
@@ -110,6 +126,7 @@ max 0.0 mm below surface (0% of capsule radius), p95 0.0 mm, largest patch 0.0%,
 ## 7. 結果の記録と完了判定
 
 - スクリーンショット+Preflight ログの数値を控え、次の AI セッションに共有する
+- ソルバ比較(手順1b)を行った場合は coarse / projected の数値(パス数・残留貫通・所要時間)と所見も控える
 - 見つかった問題(カプセル不適合、平滑化の過不足など)は **ROADMAP のフェーズ3に追記**する(`bd create` は分裂不具合のため使用不可。`bd close` / `bd update` は使える)
 - 完了判定(j3l のクローズ条件):
   - [ ] ヌルテストが GREEN(**メッシュSDF コライダで**。カプセルは胴・足で赤が既知のため、合否はメッシュSDF側で判定。手順0b)
