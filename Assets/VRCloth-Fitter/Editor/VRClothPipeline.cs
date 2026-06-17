@@ -96,6 +96,11 @@ namespace VRClothFitter
             }
 
             var solve = new VRClothRunLog.SolveSummary();
+            // Pick the solver: the prototype normal/tangent-split SolveProjected
+            // when requested, otherwise the current coarse-pass Solve. Both run
+            // through the IBodyCollider abstraction and return the same Result
+            // (docs/DEFORMATION_METHODS.md §3.1).
+            string solverName = fitter.useProjectedSolver ? "projected" : "coarse";
             if (hits.Count > 0)
             {
                 for (int i = 0; i < cloth.Count; i++)
@@ -106,7 +111,9 @@ namespace VRClothFitter
                         continue;
                     }
                     var snapshot = cloth[i];
-                    var result = PenetrationSolver.Solve(snapshot.worldVertices, snapshot.triangles, collider, fitter.margin);
+                    var result = fitter.useProjectedSolver
+                        ? PenetrationSolver.SolveProjected(snapshot.worldVertices, snapshot.triangles, collider, fitter.margin)
+                        : PenetrationSolver.Solve(snapshot.worldVertices, snapshot.triangles, collider, fitter.margin);
                     solve.passes = Mathf.Max(solve.passes, result.passes);
                     solve.remainingPenetrating += result.finalHitCount;
                     if (result.initialHitCount > 0)
@@ -115,7 +122,7 @@ namespace VRClothFitter
                         solve.appliedRenderers++;
                     }
                 }
-                Debug.Log($"[VRClothFitter] Push-out + smoothing finished after {solve.passes} pass(es); {solve.remainingPenetrating} vertices still penetrating.");
+                Debug.Log($"[VRClothFitter] Push-out + smoothing finished after {solve.passes} pass(es) ({solverName} solver); {solve.remainingPenetrating} vertices still penetrating.");
                 Debug.Log($"[VRClothFitter] Applied fitted mesh copies to {solve.appliedRenderers} renderer(s)"
                     + (solve.skippedRenderers > 0 ? $", skipped {solve.skippedRenderers} out-of-range renderer(s)" : "")
                     + ". Originals untouched; Undo (Ctrl+Z) restores.");

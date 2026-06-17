@@ -62,6 +62,11 @@ namespace VRClothFitter
                     "Collide against a signed-distance field built from the avatar's body mesh instead of bone capsules. Capsules can't represent the torso/feet cross-section; the mesh SDF removes that false-penetration source (docs/DESIGN.md §6). Built in memory, never saved. Off by default until E2E calibrates."),
                 fitter.useMeshSdfCollider);
 
+            fitter.useProjectedSolver = EditorGUILayout.Toggle(
+                new GUIContent("Use Projected Solver (Prototype)",
+                    "Normal/tangent-split solver: re-projects penetrating vertices onto the margin surface after every smoothing step, so the field can't sink back in and no λ/pass tuning is needed (docs/DEFORMATION_METHODS.md §3.1). Off = current coarse-pass solver. Prototype — compare the two in E2E."),
+                fitter.useProjectedSolver);
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Body Radius Estimation", EditorStyles.boldLabel);
 
