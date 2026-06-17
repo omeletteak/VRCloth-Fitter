@@ -92,15 +92,16 @@ max 0.0 mm below surface (0% of capsule radius), p95 0.0 mm, largest patch 0.0%,
 
 > **前提**: この比較は**貫通が実際に出るクロス着せ替え(手順1)でのみ意味がある**。ヌルテスト(手順0)は理想的に検出ゼロでソルバが一度も実行されない(パイプラインは `hits.Count > 0` のときだけソルバを呼ぶ)ため、両ソルバの差は出ない。ヌルテストの合否は検出側で見るもので、ソルバ評価は本手順で行う。
 
-1. **Use Projected Solver (Prototype)** を **OFF** のまま Run Fitting(= coarse)。ログ `... finished after N pass(es) (coarse solver); M vertices still penetrating` の **N(パス数)・M(残留貫通)** と、所要時間(体感)を控える。Before/After スクショを撮る
-2. **Ctrl+Z** で元に戻す(§4)
-3. **Use Projected Solver (Prototype)** を **ON** にして Run Fitting(= projected)。ログが **`(projected solver)`** になっていることを確認し、同じ項目を控える
-4. 比較の観点:
+1. **Use Projected Solver (Prototype)** を **OFF** のまま Run Fitting(= coarse)。ログの **`Detected N penetrating vertices`(初期検出数 N)** をメモし、`... finished after P pass(es) (coarse solver); M vertices still penetrating` の **M(残留貫通)** と所要時間(体感)も控える。Before/After スクショを撮る
+2. **シーンを保存せずに再オープン**して初期状態に戻す(適用は複数レンダラー分あり、Ctrl+Z だと戻し手数の数え漏れが起きやすい。再オープンが確実 — §4)
+3. **Use Projected Solver (Prototype)** を **ON** にして Run Fitting(= projected)。ログが **`(projected solver)`** になっていることを確認
+4. **公平性チェック(必須)**: projected 側の **初期検出数 `Detected …` が手順1の N と一致している**ことを最初に確認する。**一致しなければ初期状態に戻れていない**(前の Run の適用が残っている)ので、再オープンしてやり直す。一致して初めて両者は同一条件で、比較が成立する
+5. 比較の観点(**パス数は直接比較しない** — coarse は収束で決まる適応値〈最大 `maxPasses`〉、projected は固定反復数〈`iterations`〉で意味が違う。残留貫通=0 を両者が満たした上で、下記の質で比べる):
    - **残留貫通(M)** — どちらも 0 が期待値。projected で 0 にならない箇所があれば位置と数値を控える
    - **段差・膨らみ** — 押し出し境界の馴染みが projected で改善するか(本命の差。肌見せ境界×関節を重点的に)
    - **ディテール保持** — しわ・プリーツが潰れていないか(両者とも変位場方式)
    - **所要時間** — projected は毎反復で全頂点を再スキャンするため検出呼び出しが coarse より多い。実メッシュで体感差が出るか
-5. 所見は ROADMAP フェーズ3 / [DEFORMATION_METHODS.md](DEFORMATION_METHODS.md) §3.1 へフィードバックする。**projected を既定化(現行 `Solve` の置き換え)するか、`iterations` を露出するか**の判断材料になる
+6. 所見は ROADMAP フェーズ3 / [DEFORMATION_METHODS.md](DEFORMATION_METHODS.md) §3.1 へフィードバックする。**projected を既定化(現行 `Solve` の置き換え)するか、`iterations` を露出するか**の判断材料になる
 
 ## 4. 非破壊と Undo の確認
 
