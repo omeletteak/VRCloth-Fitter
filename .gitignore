@@ -31,9 +31,9 @@
 *.zip
 /vpm-listing-temp/
 
-# VRCloth-Fitter dev run logs (opt-in, local-only, never distributed — No Cache)
-/vrcloth-fitter-runs.jsonl
-/vrcloth-fitter-log*.json
+# VRCloth-Declipper dev run logs (opt-in, local-only, never distributed — No Cache)
+/vrcloth-declipper-runs.jsonl
+/vrcloth-declipper-log*.json
 
 # VPM packages / dependencies
 

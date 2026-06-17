@@ -7,7 +7,7 @@
 
 # Project-specific editor files
 /.vsconfig export-ignore
-/VRCloth-Fitter.code-workspace export-ignore
+/VRCloth-Declipper.code-workspace export-ignore
 
 # Git files
 /.gitignore export-ignore
