@@ -35,7 +35,7 @@ Modular Avatar の Merge Armature(Setup Outfit)で衣装を着せても、体型
 
 ## 開発状況
 
-**MVP(貫通修正コア)の実装は完了。残るは実機での目視 E2E 検証と配布(VPM化)です。** 配布パッケージはまだ公開していません。
+**MVP(貫通修正コア)の実装は完了。残るは実機での目視 E2E 検証です。** 初回の VPM プレリリース(`0.1.0`)を ALCOM / VCC 向けに配布しています(WIP のため 0.x)。
 
 | パイプライン | 状態 |
 |---|---|
@@ -57,9 +57,21 @@ EditMode テスト 89 件が緑。進行中の計画は [ROADMAP.md](ROADMAP.md)
 - [ALCOM](https://vrc-get.anatawa12.com/ja/alcom/) または VRChat Creator Companion(VCC)で管理された VPM プロジェクト
 - [NDMF](https://github.com/bdunderscore/ndmf) / [Modular Avatar](https://modular-avatar.nadena.dev/)
 
-## 試してみる(開発者向け)
+## 導入(ALCOM / VCC)
 
-配布パッケージはまだありません。現状はリポジトリをクローンして使います。
+VPM リポジトリとして配布しています。ALCOM または VRChat Creator Companion(VCC)で以下の listing URL を「Add Repository / リポジトリを追加」してから、プロジェクトに **VRCloth-Declipper** を Install してください。
+
+```
+https://omeletteak.github.io/vpm-listing/index.json
+```
+
+ALCOM/VCC はリポジトリ設定を共有するので、どちらからでも同じ listing を追加できます。NDMF / Modular Avatar への依存は VPM が自動解決します。
+
+> 現状は WIP プレリリース(`0.1.0`)です。実機での目視 E2E 検証が残っているため、本番アバターでの利用は Undo 前提でお試しください。
+
+## 試してみる(リポジトリから直接)
+
+配布パッケージを使わず、リポジトリをクローンして使う場合:
 
 ```powershell
 git clone https://github.com/omeletteak/VRCloth-Declipper.git

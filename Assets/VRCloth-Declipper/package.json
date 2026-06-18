@@ -1,8 +1,8 @@
 {
   "name": "dev.omelette_ak.vrcloth-declipper",
   "displayName": "VRCloth-Declipper",
-  "version": "1.0.0",
-  "description": "A tool to easily fit clothes to your VRChat avatar.",
+  "version": "0.1.0",
+  "description": "Auto-fixes body-through-clothing clipping left after dressing a VRChat avatar (e.g., via Modular Avatar's Merge Armature).",
   "unity": "2022.3",
   "author": {
     "name": "omeletteak"

@@ -1,0 +1,68 @@
+name: Build Release
+
+# Tags a release from the version in package.json and publishes the VPM zip
+# (Tests excluded) + a unitypackage fallback. The vpm-listing repo's
+# build-listing workflow then aggregates this release into the public index.
+on:
+  workflow_dispatch:
+
+env:
+  packageName: dev.omelette_ak.vrcloth-declipper
+  packagePath: Assets/VRCloth-Declipper
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Single source of truth for the version is package.json
+      - name: Get Version
+        id: version
+        uses: zoexx/github-action-json-file-properties@b9f36ce6ee6fe2680cd3c32b2c62e22eade7e590
+        with:
+          file_path: "${{ env.packagePath }}/package.json"
+          prop_path: "version"
+
+      - name: Set Environment Variables
+        run: |
+          echo "zipFile=${{ env.packageName }}-${{ steps.version.outputs.value }}.zip" >> $GITHUB_ENV
+          echo "unityPackage=${{ env.packageName }}-${{ steps.version.outputs.value }}.unitypackage" >> $GITHUB_ENV
+          echo "version=${{ steps.version.outputs.value }}" >> $GITHUB_ENV
+
+      # VPM package zip. Exclude the Tests assembly: it is gated by
+      # UNITY_INCLUDE_TESTS so it is harmless to consumers, but VPM packages
+      # should not ship the (heavy) test + benchmark sources.
+      - name: Create Package Zip
+        working-directory: "${{ env.packagePath }}"
+        run: zip -r "${{ github.workspace }}/${{ env.zipFile }}" . -x "Tests/*" "Tests.meta"
+
+      # unitypackage fallback for manual (non-VPM) import. Also excludes Tests.
+      - name: Track Package Meta Files
+        run: find "${{ env.packagePath }}/" -name \*.meta -not -path "*/Tests/*" -not -name Tests.meta >> metaList
+
+      - name: Create UnityPackage
+        uses: pCYSl5EDgo/create-unitypackage@v1.2.3
+        with:
+          package-path: ${{ env.unityPackage }}
+          include-files: metaList
+
+      - name: Create Tag
+        id: tag_version
+        uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
+        with:
+          tag: "${{ env.version }}"
+
+      # package.json is uploaded so the listing builder can read metadata and
+      # inject the zip url; do not hand-write a url into package.json.
+      - name: Make Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          files: |
+            ${{ env.zipFile }}
+            ${{ env.unityPackage }}
+            ${{ env.packagePath }}/package.json
+          tag_name: ${{ env.version }}
