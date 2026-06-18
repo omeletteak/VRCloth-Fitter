@@ -88,6 +88,17 @@ repeat (最大 maxRounds 回):
 
 Core(掃引合成)が確定したので、残るは glue とポーズ較正のみ。glue は経験的スパイクで進める。
 
+## 7. glue の置き場所 ― エディタ検証とビルド時 T-pose 固定の壁
+
+glue を**どこで走らせるか**で別々の壁に当たる。これは本命の製品形態を決める設計分岐:
+
+| 置き場所 | 見える形状 | 壁 |
+|---|---|---|
+| **エディタボタン**(現 Run Fitting と同じ) | マージ**前**(衣装はまだ別オブジェクト, [E2E_TEST_GUIDE.md](E2E_TEST_GUIDE.md)) | 本番(マージ後)の貫通を直せない。ポーズ駆動は自由だが対象はプレビュー |
+| **NDMF パス**(本番形態, [ROADMAP](../ROADMAP.md) フェーズ5) | マージ後・最終形状 | **ビルド時は T-pose 固定**([NDMF_INTEGRATION_SPIKE.md](NDMF_INTEGRATION_SPIKE.md) §②)。代表ポーズへ駆動して Bake し戻す状態操作がビルドコンテキストで安全かは**未検証** |
+
+パス**順序**そのものは解決済み(`AfterPlugin(MA)` で MAマージ後・AAO最適化前の安定スロット, [NDMF_INTEGRATION_SPIKE.md](NDMF_INTEGRATION_SPIKE.md))。だが当該スパイクは「何も変形しないダンプ」で順序だけを見たため、**ビルド中のポーズ駆動 Bake はその範囲外**。代表ポーズ対応はここで初めてビルド時 T-pose 固定と衝突する ― これはパス順とは独立した新しい未知。glue 着手前の実験計画は [MULTIPOSE_GLUE_SPIKE.md](MULTIPOSE_GLUE_SPIKE.md)。
+
 ---
 
 *関節貫通は動的・編集は静的。その不整合を「過剰拘束を蓄積デルタの掃引で満たす」合成で橋渡しする。純 Core は landed・テスト済、残るは BakeMesh×HumanPose のエディタ glue(スパイク)とポーズ較正(目視)。*
