@@ -30,8 +30,8 @@
 - [x] リポジトリの public 化(完了済みだったが bd の表示不具合で未完了扱いになっていた — bd: 4ea は closed)
 - [x] 公開内容レビュー — docs 全体のトーンと `.beads/issues.jsonl` のノートを [docs/INFORMATION_ARCHITECTURE.md](docs/INFORMATION_ARCHITECTURE.md) §6 の規律で確認(2026-06-13 実施)。同日、炎上リスク低減のため競合の名指し解析を構造的記述へ改め、開放/閉鎖の道徳的フレームを緩和
 - [x] Runtime/Editor の asmdef 整備(Core / Runtime / Editor / Tests.Editor の4アセンブリ構成)
-- [ ] VPM パッケージ化(VRClothDeclipper コンポーネントの IEditorOnly 化を含む)— 下調べ済み([docs/VPM_PACKAGING.md](docs/VPM_PACKAGING.md))。**進捗**: `IEditorOnly` 化 **完了**(Runtime asmdef が `VRC.SDKBase` を参照 + `versionDefines` ガード、EditMode 89 件緑)。`package.json` に `documentationUrl`/`keywords` 追加済み、`vpmDependencies` 下限を設定済み(NDMF `>=1.4.0` / MA `>=1.8.0`)。**残**: Tests の配布除外方式(§6 未決3、リリース自動化=山場B に紐づく)と vpm-listing 配布(山場B)
-- [ ] VPM リポジトリ(vpm-listing)での配布 — ALCOM / VCC どちらからも追加できる標準 VPM 形式(両者はリポジトリ設定を共有)
+- [x] VPM パッケージ化(VRClothDeclipper コンポーネントの IEditorOnly 化を含む)— 下調べ済み([docs/VPM_PACKAGING.md](docs/VPM_PACKAGING.md))。`IEditorOnly` 化 **完了**(Runtime asmdef が `VRC.SDKBase` を参照 + `versionDefines` ガード)。`package.json` に `documentationUrl`/`keywords`/`vpmDependencies` 下限(NDMF `>=1.4.0` / MA `>=1.8.0`)設定済み。**landed(2026-06-18)**: リリース自動化 `.github/workflows/release.yml`(VRChat 公式テンプレ準拠、`workflow_dispatch` で package.json の version からタグ付け→**Tests 除外**の VPM zip + unitypackage + package.json を GitHub Release に公開)。§6 未決3(Tests 除外)= zip の `-x "Tests/*"` で解決。初回公開は WIP 整合のため **0.1.0**(description も実態=貫通修正へ修正)
+- [x] VPM リポジトリ(vpm-listing)での配布 — ALCOM / VCC 共通の標準 VPM 形式。**landed(2026-06-18)**: `omeletteak/vpm-listing`(旧 VRCloth-Fitter 世代の非機能な手書き残骸を VRChat 公式 `template-package-listing` 構成へ作り直し・public 化・GitHub Pages 有効化)。`source.json` が本体リポのリリースを巡回し `index.json` を自動生成。公開 URL: **https://omeletteak.github.io/vpm-listing/index.json**(0.1.0 を配信中、第1世代の幽霊 `v1.0.0` リリース/タグは除去済み)。新バージョンは本体リポでリリースを切るだけで自動反映
 
 ## フェーズ3: 品質向上
 
