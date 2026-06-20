@@ -1,6 +1,6 @@
 # 代表ポーズ glue スパイク — Composer 核の実地検証とビルド時ポーズ駆動
 
-**状態: [手順]**(使い捨ての検証実験。本実装の前提固め)
+**状態: 段階1 landed**(エディタ glue + 実 SkinnedMeshRenderer の数値検証テスト、2026-06-21)/ **段階2 未着手**(ビルド時ポーズ駆動 Bake)
 
 ## 目的
 
@@ -20,6 +20,13 @@
 ## 段階1 — エディタでの Composer 核実地検証
 
 現 Run Fitting(単一ポーズ)を**複数ポーズへ拡張する使い捨て glue**をエディタで書き、Composer がプレースホルダ三角形でなく実メッシュで動くことを確かめる。マージ前形状でも合成ロジックの数値検証は成立する(線形性)。
+
+### 実装(2026-06-21 landed)
+
+- **glue 本体** [VRClothMultiPoseSpike](../Assets/VRCloth-Declipper/Editor/VRClothMultiPoseSpike.cs) — インスペクタの **Experimental ▸ Run Multi-Pose Fit (Spike)** ボタンで起動。`DefaultPoses()`(叩き台 = A ポーズ / 肘 ~75° / 座り / 股関節屈曲)を `HumanPoseHandler` の muscle 値で順に駆動し、各ポーズで全レンダラーを Bake → `PoseCapture`(originalWorld + 頂点別 `BlendedSkinMatrix` + ポーズ姿勢の collider)を構築。`MultiPoseComposer.Compose` で bind-local デルタ1枚に束ね、[VRClothMeshApplier.ApplyBindLocalDelta](../Assets/VRCloth-Declipper/Editor/VRClothMeshApplier.cs)(`source.vertices + delta`。線形性ゆえデルタはメッシュローカル空間で直接加算でき、増分なので二重適用も起きない)で非破壊適用。最後に各ポーズを再駆動・再 Bake して残留貫通数と maxDelta をログ出力。
+- **適用 API** `ApplyBindLocalDelta` を Applier に追加(置換でなく base 頂点へ加算、Undo 対応)。
+- **数値検証(コードで詰めた分)** [MultiPoseRoundTripTests](../Assets/VRCloth-Declipper/Tests/Editor/MultiPoseRoundTripTests.cs) — 回転+スケール付きの実 `SkinnedMeshRenderer` で、3 ポーズ捕捉 → `Compose` → `ApplyBindLocalDelta` → 各ポーズ再 Bake で**全ポーズ非貫通**を固定(EditMode 114 緑)。「捕捉 skin 行列が再スキンと合うか / Compose が収束するか / 適用が二重適用しないか」の3失敗モードをこのテストが押さえる。
+- **残り(人手ゲート)** — 実アバター×実衣装での目視較正。muscle 値は経験的叩き台で、ポーズの見た目と過膨張シルエットは目視で詰める([E2E_TEST_GUIDE.md](E2E_TEST_GUIDE.md) §7.1)。マージ前形状ゆえ衣装が素体ボーンに追従する素材が前提(§7 の落とし穴)。
 
 ### 確かめる点
 - 各代表ポーズへ `HumanPoseHandler`(muscle 値)で駆動し、各ポーズで Bake した `originalWorld`・頂点別 skin 行列([SkinningMath.BlendedSkinMatrix](../Assets/VRCloth-Declipper/Core/SkinningMath.cs))・body collider が正しく捕捉できるか

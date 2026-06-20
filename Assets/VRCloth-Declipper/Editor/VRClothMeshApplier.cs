@@ -49,5 +49,47 @@ namespace VRClothDeclipper
             renderer.sharedMesh = copy;
             EditorUtility.SetDirty(renderer);
         }
+
+        /// <summary>
+        /// Non-destructive apply of a multi-pose composition: adds a
+        /// bind-pose-local delta (from <see cref="MultiPoseComposer"/>) onto the
+        /// mesh's base vertices and swaps the renderer to the copy. The delta is
+        /// already in mesh-local space — the same space as <c>Mesh.vertices</c> —
+        /// because linear-blend skinning is linear, so it adds directly. And
+        /// because it is a correction <em>increment</em> rather than a baked
+        /// replacement, blendshapes still apply exactly once at runtime, the same
+        /// double-apply guard as <see cref="Apply"/>
+        /// (docs/MULTIPOSE_COMPOSITION.md §1, docs/ROADMAP.md phase 3).
+        /// </summary>
+        public static void ApplyBindLocalDelta(SkinnedMeshRenderer renderer, Vector3[] bindLocalDelta)
+        {
+            if (renderer == null || renderer.sharedMesh == null)
+            {
+                return;
+            }
+            var source = renderer.sharedMesh;
+            var baseVertices = source.vertices;
+            if (bindLocalDelta == null || bindLocalDelta.Length != baseVertices.Length)
+            {
+                Debug.LogWarning($"[VRClothDeclipper] ApplyBindLocalDelta: delta length ({(bindLocalDelta == null ? 0 : bindLocalDelta.Length)}) "
+                    + $"does not match vertex count ({baseVertices.Length}) on '{renderer.name}' — skipped.");
+                return;
+            }
+
+            Mesh copy = Object.Instantiate(source);
+            copy.name = source.name + " (VRClothFitted)";
+            var fitted = new Vector3[baseVertices.Length];
+            for (int v = 0; v < baseVertices.Length; v++)
+            {
+                fitted[v] = baseVertices[v] + bindLocalDelta[v];
+            }
+            copy.vertices = fitted;
+            // Normals kept from the original on purpose, same as Apply.
+            copy.RecalculateBounds();
+
+            Undo.RecordObject(renderer, "Apply VRCloth Multi-Pose Fitting");
+            renderer.sharedMesh = copy;
+            EditorUtility.SetDirty(renderer);
+        }
     }
 }

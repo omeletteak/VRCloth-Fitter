@@ -169,6 +169,26 @@ Bake 複製で、編集モードの段階1で見えていた貫通が**マージ
 - Bake 後ならボーンが統合されているので、関節を曲げると衣装も追従する。その状態で Run すればそのポーズでの貫通が修正される(結果はそのポーズに最適化される)
 - 関節の曲げ起因の貫通は体型差ゼロでも出る(素体と衣装のウェイト差×回転角)。これはフェーズ1の合否対象外として観察記録のみ(本命はフェーズ3「代表ポーズ対応」)
 
+### 7.1 代表ポーズ対応 段階1スパイク(Multi-Pose Fit / 実験)
+
+フェーズ3「代表ポーズ対応」の核 `MultiPoseComposer` を実アバターで較正する**段階1**の目視ゲート(計画は [MULTIPOSE_GLUE_SPIKE.md](MULTIPOSE_GLUE_SPIKE.md))。1回の Run を1ポーズでなく**複数の代表ポーズへ広げ、どのポーズでも貫通しない静的デルタ1枚**を作る。数値チェーン(捕捉 skin 行列・収束・二重適用回避)は EditMode テストで固定済みなので、ここで見るのは**実データでの残留数値と、過膨張のシルエット**。
+
+> **前提(§7 と同じ)**: マージ前は衣装が素体ボーンに追従しないと駆動でポーズが付かない。衣装が素体の Humanoid ボーンに乗っている(または追従する)素材を使う。確実なのは Bake 後(単一アーマチュア)。素材選びは §1.2、シェイプキーは §1.1(Sync 無しの衣装で。ポーズ効果と Sync 追従を切り分ける)。
+
+1. §2 の通りセットアップ(Target Avatar は Humanoid)。インスペクタ最下部 **Experimental ▸ Run Multi-Pose Fit (Spike)** を押す
+2. Console を読む(数値ゲート):
+   - `{renderer}: composed in N sweep(s); remainingPenetrating=0 (expect 0), maxDelta=… mm` — **remainingPenetrating=0** が期待。0 でなければ collider/ポーズが矛盾しているか `maxRounds` 不足
+   - `maxDelta` が異常に大きい(数 cm 級)なら過大デルタの兆候 — どのポーズが押し過ぎか §3/§7 の見当で確認
+   - `residual — pose '<名>', {renderer}: K/total vert(s) below margin` — 各代表ポーズの残留。**単一ポーズ Run の残留と同等**まで下がっていれば合格
+3. 目視評価(人手ゲート):
+   - **各代表ポーズ**へ実際に曲げて(または駆動ログのポーズで)、肌見せ境界×関節(袖口⇔肘、裾⇔太もも、ソックス上端⇔膝)に素体が出ていないか
+   - **静止(A ポーズ)で過膨張**していないか — 複数ポーズを同時に満たすデルタは最も厳しいポーズに合わせて膨らむ([MULTIPOSE_COMPOSITION.md](MULTIPOSE_COMPOSITION.md) §3)。許容シルエットを超える膨らみがあれば、その原因ポーズの muscle 値を [VRClothMultiPoseSpike.DefaultPoses](../Assets/VRCloth-Declipper/Editor/VRClothMultiPoseSpike.cs) で調整(muscle 値は経験的叩き台)
+   - **Before/After スクショ**(静止+代表ポーズ各1)
+4. Undo(Ctrl+Z)で元メッシュへ戻ることを確認(§5)
+5. 所見は ROADMAP フェーズ3 / MULTIPOSE_GLUE_SPIKE.md へ。muscle 値の較正結果と、過膨張の許容線を控える
+
+> **これは段階1(エディタ・マージ前でも数値検証は成立)**。本番形態(ビルド時 NDMF パスでのポーズ駆動 Bake)が成立するかは独立した**段階2**スパイクで、まだ未着手(MULTIPOSE_GLUE_SPIKE.md 段階2)。
+
 ## 8. 結果の記録と完了判定
 
 > **合否は可視の外側面で見る** — Preflight 残留は「押し出しの到達度」であって合否そのものではない。厚物衣装(靴・ブーツ等)は内側メッシュが素体に正当接触し残留が0にならないが、**可視の外側面に素体が出ていなければ合格**。残留数と可視合否は直結しない(偽陽性の整理は [DETECTION_SEMANTICS.md](DETECTION_SEMANTICS.md))。

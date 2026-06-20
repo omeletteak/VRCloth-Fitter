@@ -115,6 +115,18 @@ namespace VRClothDeclipper
 
             EditorGUILayout.Space();
 
+            // --- 実験(代表ポーズ対応 段階1スパイク) ---
+            EditorGUILayout.LabelField("Experimental", EditorStyles.boldLabel);
+            GUI.enabled = fitter.targetAvatar != null && fitter.clothToDeform != null;
+            if (GUILayout.Button(new GUIContent("Run Multi-Pose Fit (Spike)",
+                "Stage-1 multi-pose glue spike: drives the avatar through representative poses, composes one bind-local delta that clears them all, applies it non-destructively, and logs per-pose residuals. Experimental — calibrate poses by eye. See docs/MULTIPOSE_GLUE_SPIKE.md and docs/E2E_TEST_GUIDE.md §7.1.")))
+            {
+                VRClothMultiPoseSpike.Run(fitter);
+            }
+            GUI.enabled = true;
+
+            EditorGUILayout.Space();
+
             // --- デバッグ表示 ---
             EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
 
