@@ -154,6 +154,14 @@ namespace VRClothDeclipper
             }
             EditorGUILayout.EndHorizontal();
 
+            GUI.enabled = fitter.targetAvatar != null;
+            if (GUILayout.Button(new GUIContent("Measure Head Count",
+                "Logs the target avatar's head-count (頭身) measured from its body mesh — a scale-invariant body-family descriptor (docs/FAMILY_MODEL.md). Reads vertices in memory, logs only scalars (No Cache).")))
+            {
+                VRClothHeadCountMeasure.Measure(fitter);
+            }
+            GUI.enabled = true;
+
             if (VRClothDebugVisualizer.CapsuleCount > 0 || VRClothDebugVisualizer.HitCount > 0)
             {
                 EditorGUILayout.LabelField(
