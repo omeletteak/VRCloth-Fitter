@@ -32,10 +32,9 @@ namespace VRClothDeclipper.Core
         /// </summary>
         public static HeadCount Measure(IReadOnlyList<Vector3> bodyWorldVertices, float chinY)
         {
-            var r = new HeadCount { chinY = chinY };
             if (bodyWorldVertices == null || bodyWorldVertices.Count == 0)
             {
-                return r;
+                return new HeadCount { chinY = chinY };
             }
 
             float top = float.NegativeInfinity;
@@ -46,13 +45,29 @@ namespace VRClothDeclipper.Core
                 if (y > top) top = y;
                 if (y < bottom) bottom = y;
             }
+            return Measure(top, bottom, chinY);
+        }
 
-            r.topY = top;
-            r.bottomY = bottom;
-            r.height = top - bottom;
-            r.headHeight = top - chinY;
-            r.headCount = r.headHeight > 1e-6f ? r.height / r.headHeight : 0f;
-            return r;
+        /// <summary>
+        /// Computes head-count from precomputed vertical bounds. Use this when the
+        /// body spans several meshes (a split body / head / hair) and the caller
+        /// has unioned their bounds: <paramref name="topY"/> must be the crown, so
+        /// a single mesh that omits the head collapses the head height and blows
+        /// the count up (the failure that motivated this overload). Same estimate
+        /// caveat as the vertex overload (docs/DIAGNOSTIC_HONESTY.md §2).
+        /// </summary>
+        public static HeadCount Measure(float topY, float bottomY, float chinY)
+        {
+            float headHeight = topY - chinY;
+            return new HeadCount
+            {
+                topY = topY,
+                bottomY = bottomY,
+                chinY = chinY,
+                height = topY - bottomY,
+                headHeight = headHeight,
+                headCount = headHeight > 1e-6f ? (topY - bottomY) / headHeight : 0f,
+            };
         }
     }
 }

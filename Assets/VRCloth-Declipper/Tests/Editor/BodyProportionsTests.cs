@@ -45,5 +45,24 @@ namespace VRClothDeclipper.Tests
 
             Assert.AreEqual(0f, m.headCount);
         }
+
+        [Test]
+        public void Measure_FromBounds_ComputesHeadCount()
+        {
+            // crown 1.6, sole 0, chin 1.4 → height 1.6, head 0.2, head-count 8.0
+            BodyProportions.HeadCount m = BodyProportions.Measure(1.6f, 0f, 1.4f);
+
+            Assert.AreEqual(1.6f, m.height, 1e-4f);
+            Assert.AreEqual(0.2f, m.headHeight, 1e-4f);
+            Assert.AreEqual(8f, m.headCount, 1e-3f);
+        }
+
+        [Test]
+        public void Measure_FromBounds_ChinAtOrAboveTop_GuardsToZero()
+        {
+            BodyProportions.HeadCount m = BodyProportions.Measure(1.0f, 0f, 1.5f);
+
+            Assert.AreEqual(0f, m.headCount);
+        }
     }
 }
