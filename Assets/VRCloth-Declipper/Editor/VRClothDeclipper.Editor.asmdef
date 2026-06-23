@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "VRClothDeclipper.Core",
-        "VRClothDeclipper.Runtime"
+        "VRClothDeclipper.Runtime",
+        "nadena.dev.ndmf"
     ],
     "includePlatforms": [
         "Editor"

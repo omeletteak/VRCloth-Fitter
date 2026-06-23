@@ -27,20 +27,28 @@ namespace VRClothDeclipper
         /// Returns null (after logging the reason) when inputs are missing or
         /// nothing is capturable. Nothing is serialized — No Cache holds.
         /// </summary>
-        public static PreflightResult CaptureAndPreflight(VRClothDeclipper fitter)
+        public static PreflightResult CaptureAndPreflight(VRClothDeclipper fitter, GameObject bodyRootOverride = null, bool verbose = true)
         {
-            if (fitter == null || fitter.targetAvatar == null || fitter.clothToDeform == null)
+            // bodyRoot is the avatar to build the body proxy from: the scene
+            // avatar in the editor, or the post-Merge-Armature build clone
+            // (ctx.AvatarRootObject) when called from the NDMF build pass.
+            GameObject bodyRoot = bodyRootOverride != null ? bodyRootOverride
+                : (fitter != null ? fitter.targetAvatar : null);
+            if (fitter == null || bodyRoot == null || fitter.clothToDeform == null)
             {
                 Debug.LogError("VRClothDeclipper: Target Avatar or Cloth is not set.");
                 return null;
             }
 
-            string modeStr = fitter.mode.ToString();
-            Debug.Log($"[VRClothDeclipper] Running in {modeStr} mode...");
-            Debug.Log($"Target Avatar: {fitter.targetAvatar.name}, Cloth: {fitter.clothToDeform.name}");
-            if (fitter.sourceAvatar != null)
+            if (verbose)
             {
-                Debug.Log($"Source Avatar: {fitter.sourceAvatar.name}");
+                string modeStr = fitter.mode.ToString();
+                Debug.Log($"[VRClothDeclipper] Running in {modeStr} mode...");
+                Debug.Log($"Target Avatar: {bodyRoot.name}, Cloth: {fitter.clothToDeform.name}");
+                if (fitter.sourceAvatar != null)
+                {
+                    Debug.Log($"Source Avatar: {fitter.sourceAvatar.name}");
+                }
             }
 
             GameObject clothRoot = fitter.clothRoot != null ? fitter.clothRoot : fitter.clothToDeform.gameObject;
@@ -56,9 +64,9 @@ namespace VRClothDeclipper
             {
                 totalVertices += snapshot.VertexCount;
             }
-            Debug.Log($"[VRClothDeclipper] Captured {cloth.Count} renderer(s), {totalVertices} vertices in world space.");
+            if (verbose) Debug.Log($"[VRClothDeclipper] Captured {cloth.Count} renderer(s), {totalVertices} vertices in world space.");
 
-            var capsules = VRClothProxyGenerator.Generate(fitter.targetAvatar);
+            var capsules = VRClothProxyGenerator.Generate(bodyRoot);
             if (capsules == null)
             {
                 Debug.LogError("Failed to generate proxy capsules. Aborting.");
@@ -86,7 +94,7 @@ namespace VRClothDeclipper
             }
             else
             {
-                if (fitter.useMeshSdfCollider)
+                if (verbose && fitter.useMeshSdfCollider)
                 {
                     Debug.LogWarning("[VRClothDeclipper] Mesh-SDF collider unavailable — falling back to bone capsules for this run.");
                 }
@@ -96,7 +104,7 @@ namespace VRClothDeclipper
                 hits = VRClothPenetrationDetector.Detect(cloth, capsules, fitter.margin);
             }
             VRClothDebugVisualizer.SetHits(hits);
-            Debug.Log($"[VRClothDeclipper] Detected {hits.Count} penetrating vertices (margin {fitter.margin:F3} m, {backend} backend).");
+            if (verbose) Debug.Log($"[VRClothDeclipper] Detected {hits.Count} penetrating vertices (margin {fitter.margin:F3} m, {backend} backend).");
 
             // Preflight: judge per renderer whether the body-shape difference
             // is within the supported envelope (docs/DESIGN.md §9).
@@ -106,7 +114,7 @@ namespace VRClothDeclipper
                 var snapshot = cloth[i];
                 reports[i] = PreflightDiagnostic.Evaluate(
                     snapshot.worldVertices, snapshot.triangles, snapshot.hits, collider, fitter.margin);
-                Debug.Log(FormatPreflight(snapshot.renderer.name, reports[i]));
+                if (verbose) Debug.Log(FormatPreflight(snapshot.renderer.name, reports[i]));
             }
 
             return new PreflightResult
@@ -118,6 +126,46 @@ namespace VRClothDeclipper
                 hits = hits,
                 reports = reports,
             };
+        }
+
+        /// <summary>
+        /// Capture → detect → preflight → solve, returning a fitted mesh copy per
+        /// cloth renderer <em>without</em> assigning it anywhere (no Undo, no
+        /// scene mutation, nothing serialized — No Cache). This is the shared core
+        /// behind both the NDMF build pass (<see cref="VRClothDeclipperPass"/>,
+        /// with <paramref name="bodyRoot"/> = the post-Merge-Armature build clone)
+        /// and the live preview (<see cref="VRClothDeclipperPreview"/>, with the
+        /// scene avatar), so the fit shown in the editor is exactly the fit baked
+        /// at upload. Mirrors <see cref="Run"/>'s solve loop: RED renderers are
+        /// skipped unless <see cref="VRClothDeclipper.forceApplyOutOfRange"/>, and
+        /// only renderers that actually penetrate produce a mesh. The caller owns
+        /// every returned mesh and must assign or destroy it.
+        /// </summary>
+        public static List<(SkinnedMeshRenderer renderer, Mesh fitted)> SolveToFittedMeshes(
+            VRClothDeclipper fitter, GameObject bodyRoot, bool verbose = false)
+        {
+            var results = new List<(SkinnedMeshRenderer, Mesh)>();
+            var pf = CaptureAndPreflight(fitter, bodyRoot, verbose);
+            if (pf == null || pf.hits.Count == 0)
+            {
+                return results;
+            }
+            for (int i = 0; i < pf.cloth.Count; i++)
+            {
+                if (pf.reports[i].verdict == PreflightVerdict.Red && !fitter.forceApplyOutOfRange)
+                {
+                    continue;
+                }
+                var snapshot = pf.cloth[i];
+                var result = fitter.useProjectedSolver
+                    ? PenetrationSolver.SolveProjected(snapshot.worldVertices, snapshot.triangles, pf.collider, fitter.margin)
+                    : PenetrationSolver.Solve(snapshot.worldVertices, snapshot.triangles, pf.collider, fitter.margin);
+                if (result.initialHitCount > 0)
+                {
+                    results.Add((snapshot.renderer, VRClothMeshApplier.BuildFittedMesh(snapshot)));
+                }
+            }
+            return results;
         }
 
         public static void Run(VRClothDeclipper fitter)

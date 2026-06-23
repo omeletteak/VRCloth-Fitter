@@ -1,6 +1,6 @@
 # VRCloth-Declipper ロードマップ
 
-このドキュメントは VRCloth-Declipper の開発計画を示します。背景にある設計判断と競合分析は [docs/DESIGN.md](docs/DESIGN.md) を、ドキュメント全体の索引は [docs/README.md](docs/README.md) を参照してください。
+このドキュメントは VRCloth-Declipper の**これからの開発計画**を示します。**出荷済みバージョンと機能の対応**は [CHANGELOG.md](CHANGELOG.md) を参照してください。背景にある設計判断と競合分析は [docs/DESIGN.md](docs/DESIGN.md) を、ドキュメント全体の索引は [docs/README.md](docs/README.md) を参照してください。
 
 ## 基本理念
 
@@ -57,7 +57,7 @@
 - [ ] **クリアランス統計** — 隙間(体表面→布)の percentile を診断に追加し、判定を両側化(TIGHT / FIT / LOOSE)。「ブカブカ」が診断に映らない片側性の補完
 - [ ] **採寸機能** — Humanoid 基準の標準計測点で素体の周径を計測(フェーズ3「カプセル半径の自動推定」と同一機構として実装)
 - [ ] **Fit Report フォーマット** — 機械可読 JSON(計測条件・ツールバージョン・メッシュハッシュ刻印)+バッジ表示
-- [ ] **NDMF パス化** — ビルド時自動修正(Merge Armature 後に実行される製品形態。エディタボタンはプレビュー用に残す)
+- [x] **NDMF パス化** — ビルド時自動修正(Merge Armature 後に実行される製品形態)。**landed(2026-06-23)**: これまでフィットは**編集時のシーン焼き込みのみ**(`VRClothMeshApplier.Apply`)で、シーン/プレファブ目視はできても**VRChat アップロードで修正前に戻る**問題があった(コンポーネントは `IEditorOnly`=ビルド時ストリップ、ビルドパス不在)。解決として、フィットを **NDMF ビルドパス**(`VRClothDeclipperPass`、`Transforming.AfterPlugin("nadena.dev.modular-avatar")`)へ移行=Merge Armature 後のクローンに本適用しアップロードへ焼き込む。同じ計算(`VRClothPipeline.SolveToFittedMeshes`、`VRClothMeshApplier.BuildFittedMesh` を共有)を **NDMF preview**(`IRenderFilter`=`VRClothDeclipperPreview`)でシーンに非破壊ライブ表示し、**「編集時=ビルド時」を構造的に保証**(プレビューとビルドが同一コアを呼ぶので二重適用は原理的に発生せず、No Cache はプロキシ表示ゆえ従来の焼き込みより厳密)。プラグイン登録は `VRClothDeclipperNdmfPlugin`。エディタの旧 Run Fitting ボタンは**診断のみ**(`Run Preflight`)へ再定義。コンパイル成功+EditMode 緑(114 total / 0 failed)。残: **実機 GUI 検証**(① シーンでプレビュー目視 ② ローカルビルドでアップロード後もメッシュが修正済みか)
   - [x] **(先行)NDMF パス順序スパイク** — MA マージ後・メッシュ最適化前に自パスを安定して挿せるかを使い捨てプローブで実機ビルド検証。**2026-06-14 成立**: `Transforming.AfterPlugin("nadena.dev.modular-avatar")` がマージ後・リターゲ後・AAO最適化前の安定スロットと確認。計画と結果は [docs/NDMF_INTEGRATION_SPIKE.md](docs/NDMF_INTEGRATION_SPIKE.md)
 - [ ] **しきい値バージョニング** — 較正で変わる判定の互換性管理
 - [ ] **基準マネキンの選定** — 再配布自由なアバター数体を検証用の共通物差しに

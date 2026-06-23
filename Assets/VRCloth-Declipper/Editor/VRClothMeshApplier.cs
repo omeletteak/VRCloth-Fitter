@@ -11,7 +11,16 @@ namespace VRClothDeclipper
     /// </summary>
     public static class VRClothMeshApplier
     {
-        public static void Apply(ClothSnapshot snapshot)
+        /// <summary>
+        /// Builds the fitted mesh copy from a solved snapshot, without touching
+        /// the renderer (no swap, no Undo, no SetDirty). This is the pure,
+        /// side-effect-free core shared by the edit-time <see cref="Apply"/>, the
+        /// NDMF build pass (<see cref="VRClothDeclipperPass"/>) and the live
+        /// preview (<see cref="VRClothDeclipperPreview"/>), so all three produce
+        /// an identical mesh — "edit-time == build-time". The caller owns the
+        /// returned mesh and must assign or destroy it.
+        /// </summary>
+        public static Mesh BuildFittedMesh(ClothSnapshot snapshot)
         {
             var renderer = snapshot.renderer;
             var source = renderer.sharedMesh;
@@ -44,6 +53,13 @@ namespace VRClothDeclipper
             // corrections we apply, stale shading reads better than the seam
             // splits RecalculateNormals would introduce.
             copy.RecalculateBounds();
+            return copy;
+        }
+
+        public static void Apply(ClothSnapshot snapshot)
+        {
+            var renderer = snapshot.renderer;
+            Mesh copy = BuildFittedMesh(snapshot);
 
             Undo.RecordObject(renderer, "Apply VRCloth Fitting");
             renderer.sharedMesh = copy;

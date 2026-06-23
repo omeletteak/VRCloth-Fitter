@@ -106,10 +106,20 @@ namespace VRClothDeclipper
             EditorGUILayout.Space();
 
             // --- 実行 ---
+            // The fit is applied non-destructively by the NDMF build pass
+            // (VRClothDeclipperPass) at upload, and shown live in the Scene view by
+            // the NDMF preview (VRClothDeclipperPreview) — both from the same
+            // SolveToFittedMeshes core, so what you preview is what ships. This
+            // button therefore no longer bakes into the scene; it only reports the
+            // preflight verdict/numbers to the Console for tuning (docs/DESIGN.md §9).
+            EditorGUILayout.HelpBox(
+                "The fit is applied automatically at build (NDMF) and shown live in the Scene view (NDMF preview) — "
+                + "nothing is baked into your scene. This button only logs the preflight diagnosis to the Console.",
+                MessageType.Info);
             GUI.enabled = fitter.targetAvatar != null && fitter.clothToDeform != null;
-            if (GUILayout.Button("Run Fitting", GUILayout.Height(30)))
+            if (GUILayout.Button("Run Preflight (Diagnostics)", GUILayout.Height(30)))
             {
-                VRClothPipeline.Run(fitter);
+                VRClothPipeline.CaptureAndPreflight(fitter);
             }
             GUI.enabled = true;
 
