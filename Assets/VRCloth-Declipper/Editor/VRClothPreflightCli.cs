@@ -159,6 +159,8 @@ namespace VRClothDeclipper
                     fitter = fitter.name,
                     renderer = before.cloth[i].renderer != null ? before.cloth[i].renderer.name : "(null)",
                     backend = before.backend,
+                    bodyCoverage = before.bodyCoverage,
+                    bodyModelLowConfidence = before.bodyModelLowConfidence,
                     vertexCount = rb.vertexCount,
                     verdictBefore = rb.verdict.ToString().ToUpperInvariant(),
                     redCauseBefore = rb.redCause.ToString(),
@@ -260,6 +262,8 @@ namespace VRClothDeclipper
             public string fitter;
             public string renderer;
             public string backend;
+            public float bodyCoverage;            // fraction of capsules measured from the body
+            public bool bodyModelLowConfidence;   // true = GREEN here may be a false green (§1)
             public int vertexCount;
             public bool targetedBySolver; // false = RED, skipped by the solver
             public string verdictBefore;

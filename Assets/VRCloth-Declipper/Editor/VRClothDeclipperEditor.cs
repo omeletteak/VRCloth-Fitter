@@ -81,7 +81,7 @@ namespace VRClothDeclipper
             {
                 fitter.bodyMesh = (SkinnedMeshRenderer)EditorGUILayout.ObjectField(
                     new GUIContent("Body Mesh (Optional)",
-                        "Auto-detected when empty: largest active skinned mesh on the Hips bone, excluding the cloth. Used for radius estimation and the mesh-SDF collider."),
+                        "Empty (recommended): auto-detect aggregates ALL body parts skinned to the Hips bone, so split bodies (separate torso/head/hair meshes) are fully covered. Set it only to override with a single mesh. Used for radius estimation and the mesh-SDF collider."),
                     fitter.bodyMesh, typeof(SkinnedMeshRenderer), true);
             }
 

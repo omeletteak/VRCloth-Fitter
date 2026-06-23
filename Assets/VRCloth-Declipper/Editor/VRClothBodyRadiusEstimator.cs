@@ -29,7 +29,17 @@ namespace VRClothDeclipper
             public List<BodyCapsule> capsules;
             public int[] sampleCounts;
             public bool[] estimated;
+
+            /// <summary>First resolved body mesh, for logging/back-compat.</summary>
             public SkinnedMeshRenderer bodyMesh;
+
+            /// <summary>
+            /// Every body-part mesh the radii were measured from. More than one on
+            /// a split body (torso/head/hair as separate meshes); aggregating them
+            /// is what stops a split body resolving to a single part (see
+            /// <see cref="ResolveBodyMeshes"/>).
+            /// </summary>
+            public List<SkinnedMeshRenderer> bodyMeshes;
         }
 
         public static Outcome Apply(VRClothDeclipper fitter, List<BodyCapsule> capsules)
@@ -40,15 +50,28 @@ namespace VRClothDeclipper
                 return outcome;
             }
 
-            SkinnedMeshRenderer body = fitter.bodyMesh != null ? fitter.bodyMesh : ResolveBodyMesh(fitter);
-            outcome.bodyMesh = body;
-            if (body == null || body.sharedMesh == null)
+            // A split body (torso/head/hair as separate meshes) has no single
+            // "body" mesh; measure from every body part so a capsule near the
+            // torso isn't left to fall back just because the torso lives in a
+            // different renderer than the one auto-detect happened to pick.
+            List<SkinnedMeshRenderer> bodies = fitter.bodyMesh != null
+                ? new List<SkinnedMeshRenderer> { fitter.bodyMesh }
+                : ResolveBodyMeshes(fitter);
+            outcome.bodyMeshes = bodies;
+            outcome.bodyMesh = bodies.Count > 0 ? bodies[0] : null;
+
+            var bodyVertices = new List<Vector3>();
+            foreach (var b in bodies)
+            {
+                if (b == null || b.sharedMesh == null) continue;
+                bodyVertices.AddRange(VRClothMeshCapture.BakeWorldVertices(b));
+            }
+            if (bodyVertices.Count == 0)
             {
                 Debug.LogWarning("[VRClothDeclipper] Body mesh for radius estimation not found — keeping default capsule radii. Assign 'Body Mesh' on the component to override.");
                 return outcome;
             }
 
-            Vector3[] bodyVertices = VRClothMeshCapture.BakeWorldVertices(body);
             float percentile = Mathf.Clamp(fitter.radiusPercentile, 0.5f, 1f);
             CapsuleRadiusEstimator.Result est = CapsuleRadiusEstimator.Estimate(
                 capsules, bodyVertices, percentile, MinSamples, GateFactor, MinRadius, MaxRadius);
@@ -56,7 +79,7 @@ namespace VRClothDeclipper
             var updated = new List<BodyCapsule>(capsules.Count);
             int estimatedCount = 0;
             var sb = new StringBuilder();
-            sb.AppendLine($"[VRClothDeclipper] Body radius estimate from '{body.name}' ({bodyVertices.Length} verts), p{Mathf.RoundToInt(percentile * 100f)}:");
+            sb.AppendLine($"[VRClothDeclipper] Body radius estimate from {DescribeBodies(bodies)} ({bodyVertices.Count} verts), p{Mathf.RoundToInt(percentile * 100f)}:");
             for (int i = 0; i < capsules.Count; i++)
             {
                 BodyCapsule c = capsules[i];
@@ -123,6 +146,74 @@ namespace VRClothDeclipper
                 }
             }
             return best;
+        }
+
+        /// <summary>
+        /// Best-guess body mesh <em>set</em>: every active skinned mesh under the
+        /// avatar that is not part of the cloth being fitted and is skinned to the
+        /// Hips bone — i.e. all parts of a split body (torso/head/hair authored as
+        /// separate meshes), not just the largest single one. Aggregating them is
+        /// what keeps a split body (e.g. the YOYOGI MORI "YM Body" standard) from
+        /// resolving to one part — in the worst case the hair — which leaves the
+        /// collider with no surface over the torso and legs and produces
+        /// false-green preflights. Falls back to all non-cloth candidates when
+        /// nothing is Hips-skinned (non-humanoid rigs). Logged by the callers so
+        /// the user can correct it via the Body Mesh field.
+        /// </summary>
+        public static List<SkinnedMeshRenderer> ResolveBodyMeshes(VRClothDeclipper fitter)
+        {
+            var candidates = new List<SkinnedMeshRenderer>();
+            var onHips = new List<SkinnedMeshRenderer>();
+            GameObject avatar = fitter != null ? fitter.targetAvatar : null;
+            if (avatar == null)
+            {
+                return candidates;
+            }
+            Animator animator = avatar.GetComponent<Animator>();
+            Transform hips = (animator != null && animator.isHuman)
+                ? animator.GetBoneTransform(HumanBodyBones.Hips)
+                : null;
+            Transform clothRoot = fitter.clothRoot != null
+                ? fitter.clothRoot.transform
+                : (fitter.clothToDeform != null ? fitter.clothToDeform.transform : null);
+
+            foreach (SkinnedMeshRenderer smr in avatar.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (smr.sharedMesh == null || !smr.gameObject.activeInHierarchy || !smr.enabled)
+                {
+                    continue;
+                }
+                if (clothRoot != null && IsUnder(smr.transform, clothRoot))
+                {
+                    continue; // the cloth being fitted, not the body
+                }
+                candidates.Add(smr);
+                if (hips != null && System.Array.IndexOf(smr.bones, hips) >= 0)
+                {
+                    onHips.Add(smr);
+                }
+            }
+            // Prefer the Hips-skinned meshes (the body skeleton); fall back to all
+            // non-cloth candidates only when nothing is Hips-skinned.
+            return onHips.Count > 0 ? onHips : candidates;
+        }
+
+        static string DescribeBodies(List<SkinnedMeshRenderer> bodies)
+        {
+            if (bodies == null || bodies.Count == 0)
+            {
+                return "(none)";
+            }
+            if (bodies.Count == 1)
+            {
+                return $"'{bodies[0].name}'";
+            }
+            var names = new List<string>(bodies.Count);
+            foreach (var b in bodies)
+            {
+                names.Add(b != null ? b.name : "(null)");
+            }
+            return $"{bodies.Count} meshes ('" + string.Join("', '", names) + "')";
         }
 
         static bool IsUnder(Transform t, Transform root)

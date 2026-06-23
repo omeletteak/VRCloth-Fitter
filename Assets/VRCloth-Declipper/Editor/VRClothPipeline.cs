@@ -20,6 +20,20 @@ namespace VRClothDeclipper
             public string backend;
             public List<PenetrationHit> hits;
             public PreflightReport[] reports;
+
+            /// <summary>
+            /// Fraction of proxy capsules that found body geometry to measure from
+            /// (<see cref="BodyModelConfidence.Coverage"/>). −1 when radius
+            /// estimation was off, so no coverage could be judged.
+            /// </summary>
+            public float bodyCoverage;
+
+            /// <summary>
+            /// True when the body model covers too little of the skeleton to trust
+            /// a GREEN verdict — the false-green guard (docs/DIAGNOSTIC_HONESTY.md
+            /// §1). Set only when radius estimation ran.
+            /// </summary>
+            public bool bodyModelLowConfidence;
         }
 
         /// <summary>
@@ -72,9 +86,18 @@ namespace VRClothDeclipper
                 Debug.LogError("Failed to generate proxy capsules. Aborting.");
                 return null;
             }
+            // −1 = not judged (radius estimation off). When it runs, the
+            // per-capsule "estimated" flags double as a body-coverage signal: a
+            // split body resolved to one part (e.g. the hair) measures almost
+            // nothing, which is the false-green tell (docs/DIAGNOSTIC_HONESTY.md §1).
+            float bodyCoverage = -1f;
+            bool bodyModelLowConfidence = false;
             if (fitter.estimateRadiiFromBody)
             {
-                capsules = VRClothBodyRadiusEstimator.Apply(fitter, capsules).capsules;
+                var outcome = VRClothBodyRadiusEstimator.Apply(fitter, capsules);
+                capsules = outcome.capsules;
+                bodyCoverage = BodyModelConfidence.Coverage(outcome.estimated);
+                bodyModelLowConfidence = BodyModelConfidence.IsLowConfidence(outcome.estimated);
             }
             // Pick the collision backend: the mesh-SDF collider when requested
             // and a body mesh is available, otherwise the bone capsules
@@ -117,6 +140,21 @@ namespace VRClothDeclipper
                 if (verbose) Debug.Log(FormatPreflight(snapshot.renderer.name, reports[i]));
             }
 
+            // False-green guard: when the body model covers too little of the
+            // skeleton, GREEN means "could not see the body", not "no penetration"
+            // — surface that instead of letting a false green stand silently
+            // (docs/DIAGNOSTIC_HONESTY.md §1). Gated by verbose so the per-frame
+            // live preview doesn't spam; the inspector's Run Preflight button and
+            // the headless CLI are verbose and do show it.
+            if (verbose && bodyModelLowConfidence)
+            {
+                Debug.LogWarning(
+                    $"[VRClothDeclipper] ⚠ Body coverage low: only {bodyCoverage:P0} of proxy capsules found body geometry. "
+                    + "The body model is likely missing parts — a split body whose parts weren't all detected, or an auto-picked "
+                    + "wrong body mesh (e.g. the hair). GREEN / low-penetration results here are NOT trustworthy (possible false green). "
+                    + "Assign 'Body Mesh' on the component or verify the body parts are active (docs/DESIGN.md §9).");
+            }
+
             return new PreflightResult
             {
                 cloth = cloth,
@@ -125,6 +163,8 @@ namespace VRClothDeclipper
                 backend = backend,
                 hits = hits,
                 reports = reports,
+                bodyCoverage = bodyCoverage,
+                bodyModelLowConfidence = bodyModelLowConfidence,
             };
         }
 
@@ -229,7 +269,7 @@ namespace VRClothDeclipper
             // and mesh-SDF runs can be compared (docs/DESIGN.md §6). Capsule
             // geometry is still logged; per-capsule attribution is skipped for
             // mesh hits, which carry no capsule index.
-            VRClothRunLog.Write(fitter, cloth, pf.capsules, hits, reports, solve, pf.backend);
+            VRClothRunLog.Write(fitter, cloth, pf.capsules, hits, reports, solve, pf.backend, pf.bodyCoverage);
             Debug.Log("[VRClothDeclipper] Process complete.");
         }
 

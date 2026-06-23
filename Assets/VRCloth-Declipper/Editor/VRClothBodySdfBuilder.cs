@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace VRClothDeclipper
@@ -23,27 +24,48 @@ namespace VRClothDeclipper
                 return null;
             }
 
-            SkinnedMeshRenderer body = fitter.bodyMesh != null
-                ? fitter.bodyMesh
-                : VRClothBodyRadiusEstimator.ResolveBodyMesh(fitter);
-            if (body == null || body.sharedMesh == null)
+            // A split body (torso/head/hair as separate meshes) has no single
+            // "body" mesh; combine every body part into one collider so the SDF
+            // covers the whole body. Resolving to a single part — in the worst
+            // case the hair — leaves the torso and legs with no surface, so
+            // garments there read as non-penetrating (a false green, §9).
+            List<SkinnedMeshRenderer> bodies = fitter.bodyMesh != null
+                ? new List<SkinnedMeshRenderer> { fitter.bodyMesh }
+                : VRClothBodyRadiusEstimator.ResolveBodyMeshes(fitter);
+
+            // BakeWorldVertices and sharedMesh.triangles share each mesh's vertex
+            // order, so per mesh the triangle indices line up with the baked
+            // positions; concatenating shifts each part's indices by the running
+            // vertex offset.
+            var worldVertices = new List<Vector3>();
+            var triangles = new List<int>();
+            var used = new List<string>();
+            foreach (var body in bodies)
+            {
+                if (body == null || body.sharedMesh == null) continue;
+                Vector3[] bv = VRClothMeshCapture.BakeWorldVertices(body);
+                int[] bt = body.sharedMesh.triangles;
+                if (bv.Length == 0 || bt.Length == 0) continue;
+                int offset = worldVertices.Count;
+                worldVertices.AddRange(bv);
+                for (int i = 0; i < bt.Length; i++) triangles.Add(bt[i] + offset);
+                used.Add(body.name);
+            }
+
+            if (worldVertices.Count == 0 || triangles.Count == 0)
             {
                 Debug.LogWarning("[VRClothDeclipper] Mesh-SDF collider: body mesh not found — assign 'Body Mesh' on the component, or turn off 'Use Mesh SDF Collider' to fall back to capsules.");
                 return null;
             }
 
-            // BakeWorldVertices and sharedMesh.triangles share the mesh's vertex
-            // order, so the triangle indices line up with the baked positions.
-            Vector3[] vertices = VRClothMeshCapture.BakeWorldVertices(body);
-            int[] triangles = body.sharedMesh.triangles;
-            var collider = new MeshSdfCollider(vertices, triangles);
+            var collider = new MeshSdfCollider(worldVertices.ToArray(), triangles.ToArray());
             if (!collider.IsValid)
             {
-                Debug.LogWarning($"[VRClothDeclipper] Mesh-SDF collider: body mesh '{body.name}' has no triangles — falling back to capsules.");
+                Debug.LogWarning($"[VRClothDeclipper] Mesh-SDF collider: body mesh '{string.Join(", ", used)}' has no triangles — falling back to capsules.");
                 return null;
             }
 
-            Debug.Log($"[VRClothDeclipper] Mesh-SDF collider built from '{body.name}' ({vertices.Length} verts, {triangles.Length / 3} tris).");
+            Debug.Log($"[VRClothDeclipper] Mesh-SDF collider built from {used.Count} mesh(es) ({worldVertices.Count} verts, {triangles.Count / 3} tris): {string.Join(", ", used)}.");
             return collider;
         }
     }

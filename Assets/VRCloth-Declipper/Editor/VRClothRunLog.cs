@@ -88,7 +88,8 @@ namespace VRClothDeclipper
             IReadOnlyList<PenetrationHit> hits,
             IReadOnlyList<PreflightReport> reports,
             SolveSummary solve,
-            string colliderBackend)
+            string colliderBackend,
+            float bodyCoverage = -1f)
         {
             if (!Enabled)
             {
@@ -97,7 +98,7 @@ namespace VRClothDeclipper
             try
             {
                 string json = JsonUtility.ToJson(
-                    BuildDto(fitter, cloth, capsules, hits, reports, solve, colliderBackend), false);
+                    BuildDto(fitter, cloth, capsules, hits, reports, solve, colliderBackend, bodyCoverage), false);
                 string path = FilePath();
                 File.AppendAllText(path, json + "\n");
                 Debug.Log($"[VRClothDeclipper] Run log appended: {path}");
@@ -142,7 +143,8 @@ namespace VRClothDeclipper
             IReadOnlyList<PenetrationHit> hits,
             IReadOnlyList<PreflightReport> reports,
             SolveSummary solve,
-            string colliderBackend)
+            string colliderBackend,
+            float bodyCoverage)
         {
             float margin = fitter != null ? fitter.margin : 0f;
 
@@ -207,6 +209,7 @@ namespace VRClothDeclipper
                     : (fitter != null && fitter.clothToDeform != null ? fitter.clothToDeform.name : ""),
                 clothPath = ResolveClothPath(fitter),
                 margin_m = margin,
+                bodyCoverage = bodyCoverage,
                 totalCapsules = capsuleCount,
                 totalHits = hits != null ? hits.Count : 0,
                 capsules = capDtos,
@@ -224,7 +227,7 @@ namespace VRClothDeclipper
         [Serializable]
         class RunLogDto
         {
-            public string schema = "vrcloth-declipper-run/2";
+            public string schema = "vrcloth-declipper-run/3";
             public string timestamp;
             public string colliderBackend;
             public string avatar;
@@ -232,6 +235,13 @@ namespace VRClothDeclipper
             public string clothRoot;
             public string clothPath;
             public float margin_m;
+
+            /// <summary>
+            /// Fraction of proxy capsules measured from the body; a low value
+            /// flags a possible false green (split body / wrong body mesh).
+            /// −1 when radius estimation was off. (schema /3)
+            /// </summary>
+            public float bodyCoverage;
             public int totalCapsules;
             public int totalHits;
             public CapsuleDto[] capsules;

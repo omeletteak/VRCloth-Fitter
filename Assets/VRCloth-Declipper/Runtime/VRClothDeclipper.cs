@@ -46,7 +46,7 @@ namespace VRClothDeclipper
         [Tooltip("Measure each proxy capsule's radius from the avatar's body mesh instead of fixed defaults. Off = legacy fixed radii.")]
         public bool estimateRadiiFromBody = true;
 
-        [Tooltip("Body mesh to measure radii from. Auto-detected (largest active skinned mesh on the Hips bone, excluding the cloth) when left empty.")]
+        [Tooltip("Body mesh to measure radii from. Left empty (recommended): auto-detect aggregates ALL body parts skinned to the Hips bone, so split bodies (separate torso/head/hair meshes, e.g. YM Body) are fully covered. Set it only to override with a single mesh.")]
         public SkinnedMeshRenderer bodyMesh;
 
         [Tooltip("Per capsule, the radius is this percentile of the body-surface distances assigned to it. Higher = looser (envelops more of the body), lower = tighter.")]
