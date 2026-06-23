@@ -21,23 +21,50 @@ namespace VRClothDeclipper
     /// </summary>
     public static class VRClothHeadCountMeasure
     {
-        public static void Measure(VRClothDeclipper fitter)
+        /// <summary>
+        /// Head-count measurement of one avatar: the unioned crown/sole bounds and
+        /// the head-count under both bone-proxy chin references (Neck and Head),
+        /// either of which may be absent. <see cref="ok"/> is false when the avatar
+        /// is missing/non-Humanoid or has no body mesh. Scalars only — No Cache.
+        /// Shared by the inspector log (<see cref="Measure"/>) and the body
+        /// measurement dump (<see cref="VRClothMeasurementDump"/>) so both read the
+        /// same numbers.
+        /// </summary>
+        public struct Result
         {
+            public bool ok;
+            public int meshCount;
+            public int vertCount;
+            public float top;     // crown (includes hair/accessories)
+            public float bottom;  // sole
+            public bool hasNeck;
+            public bool hasHead;
+            public BodyProportions.HeadCount neckRef; // valid when hasNeck
+            public BodyProportions.HeadCount headRef; // valid when hasHead
+
+            public float Height => top - bottom;
+        }
+
+        /// <summary>
+        /// Computes the head-count Result for the fitter's target avatar without
+        /// logging. Bounds are unioned over every active body mesh except the cloth
+        /// being fitted, so a split body/head/hair still yields the true crown/sole
+        /// (measuring one mesh that omits the head collapses the head height and
+        /// blows the count up). Reads vertices in memory and keeps only scalars.
+        /// </summary>
+        public static Result Compute(VRClothDeclipper fitter)
+        {
+            var result = new Result();
             if (fitter == null || fitter.targetAvatar == null)
             {
-                Debug.LogWarning("[VRClothDeclipper] Head-count: assign a Target Avatar first.");
-                return;
+                return result;
             }
-
             Animator animator = fitter.targetAvatar.GetComponent<Animator>();
             if (animator == null || !animator.isHuman)
             {
-                Debug.LogWarning("[VRClothDeclipper] Head-count: target avatar must be Humanoid.");
-                return;
+                return result;
             }
 
-            // Union the vertical bounds over every active body mesh except the
-            // outfit, so a split body+head+hair still yields the true crown/sole.
             Transform clothRoot = fitter.clothRoot != null ? fitter.clothRoot.transform : null;
             float top = float.NegativeInfinity;
             float bottom = float.PositiveInfinity;
@@ -66,31 +93,65 @@ namespace VRClothDeclipper
 
             if (meshCount == 0 || vertCount == 0)
             {
-                Debug.LogWarning("[VRClothDeclipper] Head-count: no body meshes found on the target avatar (every skinned mesh is under the cloth root or inactive).");
-                return;
+                return result;
             }
 
             Transform neck = animator.GetBoneTransform(HumanBodyBones.Neck);
             Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
 
-            var sb = new StringBuilder();
-            sb.AppendLine($"[VRClothDeclipper] Head-count over {meshCount} body mesh(es), {vertCount} verts (crown {top:F3} m, sole {bottom:F3} m):");
-
+            result.ok = true;
+            result.meshCount = meshCount;
+            result.vertCount = vertCount;
+            result.top = top;
+            result.bottom = bottom;
             if (neck != null)
             {
-                BodyProportions.HeadCount m = BodyProportions.Measure(top, bottom, neck.position.y);
-                sb.AppendLine($"  head-count (Neck ref) = {m.headCount:F2}   (height {m.height:F3} m, head {m.headHeight:F3} m)");
+                result.hasNeck = true;
+                result.neckRef = BodyProportions.Measure(top, bottom, neck.position.y);
             }
             if (head != null)
             {
-                BodyProportions.HeadCount m = BodyProportions.Measure(top, bottom, head.position.y);
-                sb.AppendLine($"  head-count (Head ref) = {m.headCount:F2}   (height {m.height:F3} m, head {m.headHeight:F3} m)");
+                result.hasHead = true;
+                result.headRef = BodyProportions.Measure(top, bottom, head.position.y);
             }
-            if (neck == null && head == null)
+            return result;
+        }
+
+        public static void Measure(VRClothDeclipper fitter)
+        {
+            if (fitter == null || fitter.targetAvatar == null)
+            {
+                Debug.LogWarning("[VRClothDeclipper] Head-count: assign a Target Avatar first.");
+                return;
+            }
+            Animator animator = fitter.targetAvatar.GetComponent<Animator>();
+            if (animator == null || !animator.isHuman)
+            {
+                Debug.LogWarning("[VRClothDeclipper] Head-count: target avatar must be Humanoid.");
+                return;
+            }
+
+            Result r = Compute(fitter);
+            if (!r.ok)
+            {
+                Debug.LogWarning("[VRClothDeclipper] Head-count: no body meshes found on the target avatar (every skinned mesh is under the cloth root or inactive).");
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"[VRClothDeclipper] Head-count over {r.meshCount} body mesh(es), {r.vertCount} verts (crown {r.top:F3} m, sole {r.bottom:F3} m):");
+            if (r.hasNeck)
+            {
+                sb.AppendLine($"  head-count (Neck ref) = {r.neckRef.headCount:F2}   (height {r.neckRef.height:F3} m, head {r.neckRef.headHeight:F3} m)");
+            }
+            if (r.hasHead)
+            {
+                sb.AppendLine($"  head-count (Head ref) = {r.headRef.headCount:F2}   (height {r.headRef.height:F3} m, head {r.headRef.headHeight:F3} m)");
+            }
+            if (!r.hasNeck && !r.hasHead)
             {
                 sb.AppendLine("  no Neck/Head bone found — cannot estimate head height.");
             }
-
             sb.Append("  note: bounds top includes hair/accessories; Neck/Head are bone proxies for the chin. Treat as an estimate to calibrate (±~0.3 head), not a fixed value — docs/DIAGNOSTIC_HONESTY.md §2.");
             Debug.Log(sb.ToString());
         }

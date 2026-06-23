@@ -34,6 +34,7 @@
 # VRCloth-Declipper dev run logs (opt-in, local-only, never distributed — No Cache)
 /vrcloth-declipper-runs.jsonl
 /vrcloth-declipper-log*.json
+/vrcloth-body-measurements.jsonl
 
 # VPM packages / dependencies
 
