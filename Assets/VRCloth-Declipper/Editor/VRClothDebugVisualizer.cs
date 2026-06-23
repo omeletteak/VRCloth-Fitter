@@ -24,7 +24,11 @@ namespace VRClothDeclipper
 
         public static bool Visible
         {
-            get => SessionState.GetBool(VisibleKey, true);
+            // Off by default: the gizmos (capsules + a sphere per penetrating
+            // vertex) are heavy to draw, and SessionState resets each editor
+            // session, so an on-default would re-show them every time a scene is
+            // opened. Toggle "Show Scene Gizmos" in the inspector to turn on.
+            get => SessionState.GetBool(VisibleKey, false);
             set
             {
                 SessionState.SetBool(VisibleKey, value);

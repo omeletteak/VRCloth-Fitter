@@ -12,7 +12,7 @@ namespace VRClothDeclipper
             VRClothDeclipper fitter = (VRClothDeclipper)target;
 
             GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 14 };
-            EditorGUILayout.LabelField("VRCloth Fitter", headerStyle);
+            EditorGUILayout.LabelField("VRCloth Declipper", headerStyle);
             EditorGUILayout.Space();
 
             // --- ターゲット設定 ---
