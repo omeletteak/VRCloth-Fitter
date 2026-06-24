@@ -25,11 +25,18 @@ namespace VRClothDeclipper
     public static class VRClothMeasurementDump
     {
         public const string FileName = "vrcloth-body-measurements.jsonl";
+        public const string GarmentFileName = "vrcloth-garment-measurements.jsonl";
 
         /// <summary>Project-root path (sibling of Assets/) of the 採寸表 file.</summary>
         public static string FilePath()
         {
             return Path.Combine(Directory.GetParent(Application.dataPath).FullName, FileName);
+        }
+
+        /// <summary>Project-root path of the garment 仕上がり寸法 file (docs/MEASUREMENT_SPEC.md §4).</summary>
+        public static string GarmentFilePath()
+        {
+            return Path.Combine(Directory.GetParent(Application.dataPath).FullName, GarmentFileName);
         }
 
         /// <summary>
@@ -87,6 +94,107 @@ namespace VRClothDeclipper
             catch (Exception e)
             {
                 Debug.LogWarning($"[VRClothDeclipper] 採寸: could not write measurement: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Measures the garment's finished inner dimensions (docs/MEASUREMENT_SPEC.md
+        /// §4) and returns one JSONL row, or null after logging. The garment is
+        /// skinned to the avatar skeleton, so the same proxy capsules apply; the
+        /// radius estimator pointed at the garment meshes gives the inner radius per
+        /// capsule. Only capsules the garment spans are estimated (a top → torso/arms);
+        /// `coverage` is that fraction. Requires the garment worn on its design
+        /// avatar (Target Avatar = skeleton, clothRoot = garment).
+        /// </summary>
+        public static string MeasureGarment(VRClothDeclipper fitter)
+        {
+            if (fitter == null || fitter.targetAvatar == null)
+            {
+                Debug.LogWarning("[VRClothDeclipper] 衣装採寸: assign a Target Avatar (for the skeleton) first.");
+                return null;
+            }
+            GameObject clothRoot = fitter.clothRoot != null ? fitter.clothRoot
+                : (fitter.clothToDeform != null ? fitter.clothToDeform.gameObject : null);
+            if (clothRoot == null)
+            {
+                Debug.LogWarning("[VRClothDeclipper] 衣装採寸: no cloth root/renderer to measure.");
+                return null;
+            }
+            List<BodyCapsule> capsules = VRClothProxyGenerator.Generate(fitter.targetAvatar);
+            if (capsules == null || capsules.Count == 0)
+            {
+                Debug.LogWarning("[VRClothDeclipper] 衣装採寸: could not generate proxy capsules (Target Avatar must be Humanoid).");
+                return null;
+            }
+            var garmentMeshes = new List<SkinnedMeshRenderer>();
+            foreach (var smr in clothRoot.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (smr.sharedMesh != null && smr.gameObject.activeInHierarchy && smr.enabled)
+                {
+                    garmentMeshes.Add(smr);
+                }
+            }
+            if (garmentMeshes.Count == 0)
+            {
+                Debug.LogWarning("[VRClothDeclipper] 衣装採寸: no active SkinnedMeshRenderer under the cloth root.");
+                return null;
+            }
+
+            CapsuleRadiusEstimator.Result est = VRClothBodyRadiusEstimator.EstimateFromMeshes(
+                capsules, garmentMeshes, fitter.radiusPercentile);
+            string meshHash = ComputeBodyHash(garmentMeshes);
+
+            int n = capsules.Count;
+            int covered = 0;
+            var capDtos = new CapsuleMeasureDto[n];
+            for (int i = 0; i < n; i++)
+            {
+                BodyCapsule c = capsules[i];
+                bool estimated = est.estimated != null && est.estimated[i];
+                if (estimated) covered++;
+                capDtos[i] = new CapsuleMeasureDto
+                {
+                    label = c.label ?? "",
+                    radius_m = est.radii[i], // garment INNER radius at this capsule
+                    length_m = Vector3.Distance(c.start, c.end),
+                    sampleCount = (est.sampleCounts != null && i < est.sampleCounts.Length) ? est.sampleCounts[i] : 0,
+                    estimated = estimated,
+                };
+            }
+
+            var dto = new GarmentMeasurementDto
+            {
+                timestamp = DateTime.Now.ToString("o"),
+                garment = clothRoot.name,
+                onAvatar = fitter.targetAvatar.name,
+                coverage = (float)covered / n,
+                meshHash = meshHash,
+                conditions = new MeasurementConditions { radiusPercentile = fitter.radiusPercentile },
+                capsuleCount = n,
+                capsules = capDtos,
+            };
+            Debug.Log($"[VRClothDeclipper] 衣装採寸 '{dto.garment}' on '{dto.onAvatar}': "
+                + $"{covered}/{n} capsules spanned (coverage {dto.coverage:P0}).");
+            return JsonUtility.ToJson(dto, false);
+        }
+
+        /// <summary>Measures the garment and appends one JSONL row to <see cref="GarmentFileName"/>.</summary>
+        public static void DumpGarment(VRClothDeclipper fitter)
+        {
+            string json = MeasureGarment(fitter);
+            if (json == null)
+            {
+                return;
+            }
+            try
+            {
+                string path = GarmentFilePath();
+                File.AppendAllText(path, json + "\n");
+                Debug.Log($"[VRClothDeclipper] 衣装採寸 appended -> {path}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[VRClothDeclipper] 衣装採寸: could not write measurement: {e.Message}");
             }
         }
 
@@ -204,6 +312,28 @@ namespace VRClothDeclipper
             public float length_m;
             public int sampleCount;    // body vertices attributed to this capsule
             public bool estimated;     // false = kept its fallback radius (no body data here)
+        }
+
+        [Serializable]
+        class GarmentMeasurementDto
+        {
+            public string schema = "vrcloth-garment-measurement/1";
+            public string timestamp;
+            public string garment;
+
+            /// <summary>The avatar whose skeleton/pose the garment was measured on.</summary>
+            public string onAvatar;
+
+            /// <summary>Fraction of proxy capsules the garment spans (a top covers torso/arms, not legs).</summary>
+            public float coverage;
+
+            /// <summary>Version key of the garment meshes (docs/MEASUREMENT_SPEC.md §6).</summary>
+            public string meshHash;
+            public MeasurementConditions conditions;
+            public int capsuleCount;
+
+            /// <summary>Per capsule, <c>radius_m</c> is the garment INNER radius (≈ finished girth / 2π); <c>estimated</c>=false means the garment does not cover this capsule.</summary>
+            public CapsuleMeasureDto[] capsules;
         }
     }
 }

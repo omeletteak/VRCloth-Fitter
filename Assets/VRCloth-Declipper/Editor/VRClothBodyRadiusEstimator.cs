@@ -149,6 +149,35 @@ namespace VRClothDeclipper
         }
 
         /// <summary>
+        /// Per-capsule radii from an arbitrary set of skinned meshes — the body,
+        /// or a <em>garment</em> for finished-dimension 採寸 (docs/MEASUREMENT_SPEC.md
+        /// §4: the garment is skinned to the same skeleton, so the nearest garment
+        /// vertices to each capsule axis give the garment's inner radius). Bakes each
+        /// mesh to world space (same convention as the body path) and runs the pure
+        /// <see cref="CapsuleRadiusEstimator"/>. Capsules the meshes don't cover keep
+        /// their fallback (estimated=false) — for a garment that marks which capsules
+        /// it spans (a top covers torso/arms, not legs).
+        /// </summary>
+        public static CapsuleRadiusEstimator.Result EstimateFromMeshes(
+            IReadOnlyList<BodyCapsule> capsules, IReadOnlyList<SkinnedMeshRenderer> meshes, float percentile)
+        {
+            var verts = new List<Vector3>();
+            if (meshes != null)
+            {
+                foreach (var m in meshes)
+                {
+                    if (m != null && m.sharedMesh != null)
+                    {
+                        verts.AddRange(VRClothMeshCapture.BakeWorldVertices(m));
+                    }
+                }
+            }
+            percentile = Mathf.Clamp(percentile, 0.5f, 1f);
+            return CapsuleRadiusEstimator.Estimate(
+                capsules, verts, percentile, MinSamples, GateFactor, MinRadius, MaxRadius);
+        }
+
+        /// <summary>
         /// Best-guess body mesh <em>set</em>: every active skinned mesh under the
         /// avatar that is not part of the cloth being fitted and is skinned to the
         /// Hips bone — i.e. all parts of a split body (torso/head/hair authored as

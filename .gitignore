@@ -35,6 +35,7 @@
 /vrcloth-declipper-runs.jsonl
 /vrcloth-declipper-log*.json
 /vrcloth-body-measurements.jsonl
+/vrcloth-garment-measurements.jsonl
 # Derived SQLite analysis DB (rebuildable from the jsonl; local-only — docs/MEASUREMENT_SPEC.md §5)
 *.sqlite
 *.sqlite3

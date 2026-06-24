@@ -175,6 +175,11 @@ namespace VRClothDeclipper
             {
                 VRClothMeasurementDump.Dump(fitter);
             }
+            if (GUILayout.Button(new GUIContent("Dump Garment Measurement (衣装採寸)",
+                "Appends one garment 仕上がり寸法 row (per-capsule INNER radius the garment spans + coverage) to vrcloth-garment-measurements.jsonl. Measure the garment worn on its design avatar; this is the cloth side of the predict layer (docs/MEASUREMENT_SPEC.md §4). Scalars + names only — No Cache.")))
+            {
+                VRClothMeasurementDump.DumpGarment(fitter);
+            }
             GUI.enabled = true;
 
             if (VRClothDebugVisualizer.CapsuleCount > 0 || VRClothDebugVisualizer.HitCount > 0)
