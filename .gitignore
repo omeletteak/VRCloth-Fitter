@@ -95,3 +95,4 @@ crash.log
 
 # Unity editor log accidentally committed at the root
 /Editor.log
+/vrcloth-scatter.svg
