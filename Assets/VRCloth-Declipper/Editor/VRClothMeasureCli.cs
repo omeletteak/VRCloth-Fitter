@@ -170,19 +170,23 @@ namespace VRClothDeclipper
                         Debug.LogWarning($"[VRClothMeasureCli] could not instantiate: {p}");
                         continue;
                     }
-                    Animator animator = instance.GetComponent<Animator>();
+                    // The Humanoid Animator may be nested (the prefab root is often a
+                    // container with the avatar — and any outfit — as children), so
+                    // search children and measure from the avatar root we find.
+                    Animator animator = instance.GetComponentInChildren<Animator>(true);
                     if (animator == null || !animator.isHuman)
                     {
-                        Debug.LogWarning($"[VRClothMeasureCli] skip (not a Humanoid avatar): {p}");
+                        Debug.LogWarning($"[VRClothMeasureCli] skip (no Humanoid avatar): {p}");
                         continue;
                     }
+                    GameObject avatarRoot = animator.gameObject;
 
                     // The fitter lives on a standalone empty object — NOT under the
                     // avatar — so clothRoot excludes nothing and the whole body is
                     // measured (a bare-body 採寸, docs/ECOSYSTEM_VISION.md §5).
                     holder = new GameObject("__vrcloth_measure__");
                     VRClothDeclipper fitter = holder.AddComponent<VRClothDeclipper>();
-                    fitter.targetAvatar = instance;
+                    fitter.targetAvatar = avatarRoot;
                     fitter.clothRoot = holder;
                     fitter.clothToDeform = null;
 
