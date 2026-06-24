@@ -29,6 +29,11 @@ namespace VRClothDeclipper
     ///       -vrclothAvatar "A.prefab,B.prefab,..."     (comma-separated; scattered avatars in one run)
     ///       -vrclothAvatarDir "Assets/.../Avatars"     (every *.prefab directly under it)
     ///
+    ///   (c) measure garment finished dimensions (cloth side, MEASUREMENT_SPEC §4):
+    ///       garment prefab(s) co-located with a body that supplies the Humanoid skeleton:
+    ///       -vrclothGarment "G1.prefab,G2.prefab,..." -vrclothOnAvatar "Body.prefab"
+    ///       (default out = vrcloth-garment-measurements.jsonl)
+    ///
     ///   -vrclothAppend                                 (append rows instead of overwriting)
     /// </code>
     /// (b) wins when both are given. The output file is OVERWRITTEN by default (a
@@ -45,10 +50,17 @@ namespace VRClothDeclipper
             try
             {
                 var lines = new List<string>();
+                string garment = GetArg("-vrclothGarment");
                 string avatarDir = GetArg("-vrclothAvatarDir");
                 string avatarPrefab = GetArg("-vrclothAvatar");
+                bool garmentMode = !string.IsNullOrEmpty(garment);
                 string mode;
-                if (!string.IsNullOrEmpty(avatarDir) || !string.IsNullOrEmpty(avatarPrefab))
+                if (garmentMode)
+                {
+                    mode = "garment";
+                    MeasureGarments(GetArg("-vrclothOnAvatar"), SplitCsv(garment), lines);
+                }
+                else if (!string.IsNullOrEmpty(avatarDir) || !string.IsNullOrEmpty(avatarPrefab))
                 {
                     mode = "prefabs";
                     MeasurePrefabs(avatarDir, avatarPrefab, lines);
@@ -62,7 +74,7 @@ namespace VRClothDeclipper
                 string outPath = GetArg("-vrclothOut");
                 if (string.IsNullOrEmpty(outPath))
                 {
-                    outPath = VRClothMeasurementDump.FilePath();
+                    outPath = garmentMode ? VRClothMeasurementDump.GarmentFilePath() : VRClothMeasurementDump.FilePath();
                 }
                 string payload = lines.Count > 0 ? string.Join("\n", lines) + "\n" : "";
                 bool append = HasFlag("-vrclothAppend");
@@ -206,6 +218,106 @@ namespace VRClothDeclipper
                     if (instance != null) UnityEngine.Object.DestroyImmediate(instance);
                 }
             }
+        }
+
+        // --- garment mode: measure a garment's finished inner dimensions ----
+        // The garment carries its avatar's skeleton but no Humanoid Animator, so a
+        // body prefab (-vrclothOnAvatar) supplies the capsules; the garment is
+        // co-located with it and its meshes are measured against those capsules.
+
+        static void MeasureGarments(string avatarPrefabPath, List<string> garmentPaths, List<string> lines)
+        {
+            if (string.IsNullOrEmpty(avatarPrefabPath))
+            {
+                Debug.LogWarning("[VRClothMeasureCli] garment mode needs -vrclothOnAvatar <body prefab> (provides the Humanoid skeleton for the capsules).");
+                return;
+            }
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject avatarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(avatarPrefabPath);
+            if (avatarPrefab == null)
+            {
+                Debug.LogWarning($"[VRClothMeasureCli] -vrclothOnAvatar not a prefab: {avatarPrefabPath}");
+                return;
+            }
+            GameObject avatar = (GameObject)PrefabUtility.InstantiatePrefab(avatarPrefab);
+            if (avatar == null)
+            {
+                Debug.LogWarning($"[VRClothMeasureCli] could not instantiate avatar: {avatarPrefabPath}");
+                return;
+            }
+            try
+            {
+                Animator animator = avatar.GetComponentInChildren<Animator>(true);
+                if (animator == null || !animator.isHuman)
+                {
+                    Debug.LogWarning($"[VRClothMeasureCli] -vrclothOnAvatar is not a Humanoid avatar: {avatarPrefabPath}");
+                    return;
+                }
+                GameObject avatarRoot = animator.gameObject;
+                avatar.transform.position = Vector3.zero;
+
+                foreach (string gpath in garmentPaths)
+                {
+                    GameObject gp = AssetDatabase.LoadAssetAtPath<GameObject>(gpath);
+                    if (gp == null)
+                    {
+                        Debug.LogWarning($"[VRClothMeasureCli] not a prefab: {gpath}");
+                        continue;
+                    }
+                    GameObject garment = null;
+                    GameObject holder = null;
+                    try
+                    {
+                        garment = (GameObject)PrefabUtility.InstantiatePrefab(gp);
+                        if (garment == null)
+                        {
+                            Debug.LogWarning($"[VRClothMeasureCli] could not instantiate garment: {gpath}");
+                            continue;
+                        }
+                        // Co-locate so the garment's bind-pose mesh lines up with the
+                        // avatar's capsules (the garment carries the avatar's skeleton;
+                        // no MA merge needed for a static measurement).
+                        garment.transform.position = Vector3.zero;
+
+                        holder = new GameObject("__vrcloth_garment_measure__");
+                        VRClothDeclipper fitter = holder.AddComponent<VRClothDeclipper>();
+                        fitter.targetAvatar = avatarRoot;
+                        fitter.clothRoot = garment;
+                        fitter.clothToDeform = garment.GetComponentInChildren<SkinnedMeshRenderer>();
+
+                        string json = VRClothMeasurementDump.MeasureGarment(fitter);
+                        if (json != null) lines.Add(json);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[VRClothMeasureCli] {gpath}: {e.Message}");
+                    }
+                    finally
+                    {
+                        if (holder != null) UnityEngine.Object.DestroyImmediate(holder);
+                        if (garment != null) UnityEngine.Object.DestroyImmediate(garment);
+                    }
+                }
+            }
+            finally
+            {
+                if (avatar != null) UnityEngine.Object.DestroyImmediate(avatar);
+            }
+        }
+
+        static List<string> SplitCsv(string csv)
+        {
+            var list = new List<string>();
+            if (string.IsNullOrEmpty(csv))
+            {
+                return list;
+            }
+            foreach (string one in csv.Split(','))
+            {
+                string t = one.Trim();
+                if (t.Length > 0) list.Add(t);
+            }
+            return list;
         }
 
         // --- shared CLI plumbing (kept self-contained) ----------------------
