@@ -10,6 +10,11 @@ import argparse
 import math
 import sqlite3
 
+try:
+    from identity import Identity  # tools/ is on sys.path when run as a script
+except Exception:
+    Identity = None
+
 
 def load_vectors(db):
     con = sqlite3.connect(db)
@@ -74,26 +79,38 @@ def main():
                     help="average-linkage distance below which avatars join a family (default 0.25)")
     ap.add_argument("--highlight", help="mark this avatar and list its family")
     ap.add_argument("--mark", nargs="*", default=[],
-                    help="mark these avatars (e.g. mini-stack supported bodies)")
+                    help="also mark these raw names (mini-stack is auto-detected from data/identity.json)")
+    ap.add_argument("--identity", help="path to identity.json (default: data/identity.json) — resolves canonical names + creator/mini-stack")
     args = ap.parse_args()
+
+    ids = Identity(args.identity) if Identity else None
 
     meta, vecs = load_vectors(args.db)
     clusters = cluster(vecs, args.threshold)
     clusters.sort(key=lambda c: min(meta[n][0] for n in c))  # by lowest head-count
 
-    print(f"families (avg-linkage shape distance < {args.threshold}; head-count Neck/Head):\n")
+    print(f"families (avg-linkage shape distance < {args.threshold}; head-count Neck/Head"
+          + ("; names canonicalized via identity.json)" if ids else ")") + ":\n")
     for k, c in enumerate(clusters, 1):
         c = sorted(c, key=lambda n: meta[n][0])
         hns = [meta[n][0] for n in c]
-        print(f"  family {k}  (head-count {min(hns):.2f}-{max(hns):.2f}, n={len(c)}):")
+        creators = sorted({ids.creator(n) for n in c if ids and ids.creator(n)}) if ids else []
+        cre = f"; creators={creators}" if creators else ""
+        print(f"  family {k}  (head-count {min(hns):.2f}-{max(hns):.2f}, n={len(c)}{cre}):")
         for n in c:
             hn, hh, ht = meta[n]
-            tag = ""
-            if args.highlight and n == args.highlight:
-                tag = "  <<< highlight"
+            name = ids.canonical(n) if ids else n
+            extra = ""
+            if ids:
+                if ids.is_mini_stack(n):
+                    extra += " *mini-stack"
+                if ids.creator(n):
+                    extra += f" [{ids.creator(n)}]"
             elif n in args.mark:
-                tag = "  *mini-stack"
-            print(f"       {n:<30} hc {hn:.2f}/{hh:.2f}  h {ht:.3f}m{tag}")
+                extra += " *mini-stack"
+            if args.highlight and n == args.highlight:
+                extra += "  <<< highlight"
+            print(f"       {name:<22} hc {hn:.2f}/{hh:.2f}  h {ht:.3f}m{extra}")
         print()
 
     if args.highlight:

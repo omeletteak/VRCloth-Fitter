@@ -66,6 +66,8 @@ Unity CLI ──→ jsonl(生・No Cache・依存ゼロ・人が読める)
 - **時期尚早(避ける)**: 専用ベクトル DB(Chroma/Qdrant/Milvus/FAISS=百万件・高次元向け、15 次元・数千件にはオーバーキル)、NoSQL/KV/グラフ DB(形が合わない、有向グラフ §7 も行列から導ける)。最小規律で「アクセスパターンに足る最簡」を選ぶ。
 - **較正データ**(しきい値版・計測条件・f パラメータ)は [CORRECTABILITY_FIELD.md](CORRECTABILITY_FIELD.md) の非定常=溜めず較正ゆえ「現行＋版履歴」の小構成。専用エンジン不要、同 DB の versions テーブルか JSON で足る。
 
+**同一性シソーラス(`data/identity.json`, v1 landed 2026-06-24)**: 採寸はプレファブ名(`MANUKA_lilToon_base_decimated` 等)で出るので、**canonical 名 ↔ 別名(alias)＋関係(creator / base素体 / family / mini-stack)** の人手キュレーション JSON で正規化する。名前と関係のみ＝公開メタで**形状を含まない(No Cache)**。`tools/identity.py`(stdlib のみ)が解決し、クラスタ等のツールが canonical 名で表示・dedup する。**経験的レイヤ(cluster=形状, matrix=フィット)が乗る同一性レイヤ**。`creator` を埋めると **「同作者≒同ファミリー」仮説(ECOSYSTEM_VISION §9)をファミリーごとの creator まとめで実データ確認**できる(シソーラス=既知の同一性 と cluster=経験的形状 は相補で、互いを検証できる)。SKOS/RDF 等の形式オントロジーは規模的に過剰=alias マップ＋数フィールドの軽量版で、育ったら broader/narrower を足す。
+
 **スキーマ素描**:
 ```
 avatars(id, name, head_count, height_m, body_coverage, mesh_hash, conditions_json, measured_at)
