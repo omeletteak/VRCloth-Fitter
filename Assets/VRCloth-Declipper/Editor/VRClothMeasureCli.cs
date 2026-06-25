@@ -221,9 +221,10 @@ namespace VRClothDeclipper
         }
 
         // --- garment mode: measure a garment's finished inner dimensions ----
-        // The garment carries its avatar's skeleton but no Humanoid Animator, so a
-        // body prefab (-vrclothOnAvatar) supplies the capsules; the garment is
-        // co-located with it and its meshes are measured against those capsules.
+        // The garment carries its own Armature but no Humanoid Animator, so a body
+        // prefab (-vrclothOnAvatar) supplies the capsules; MeasureGarment re-binds the
+        // garment bones onto the body skeleton (MA-merge core) so the meshes align
+        // with those capsules.
 
         static void MeasureGarments(string avatarPrefabPath, List<string> garmentPaths, List<string> lines)
         {
@@ -274,9 +275,9 @@ namespace VRClothDeclipper
                             Debug.LogWarning($"[VRClothMeasureCli] could not instantiate garment: {gpath}");
                             continue;
                         }
-                        // Co-locate so the garment's bind-pose mesh lines up with the
-                        // avatar's capsules (the garment carries the avatar's skeleton;
-                        // no MA merge needed for a static measurement).
+                        // Co-locate the roots; MeasureGarment then re-binds the garment
+                        // bones onto the body skeleton (MA-merge core) so the meshes
+                        // align with the capsules — co-locate alone is not enough.
                         garment.transform.position = Vector3.zero;
 
                         holder = new GameObject("__vrcloth_garment_measure__");

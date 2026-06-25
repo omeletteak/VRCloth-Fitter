@@ -140,8 +140,36 @@ namespace VRClothDeclipper
                 return null;
             }
 
-            CapsuleRadiusEstimator.Result est = VRClothBodyRadiusEstimator.EstimateFromMeshes(
-                capsules, garmentMeshes, fitter.radiusPercentile);
+            // The garment is skinned to ITS OWN Armature, so its baked vertices sit
+            // in a different bone space than the body capsules — co-locating the
+            // roots is not enough (the design body itself fails the sanity check).
+            // Re-bind the garment renderers' bones to the body's same-named bones
+            // (the core of MA Merge Armature, done just for the measurement) so the
+            // garment meshes skin on the BODY skeleton and line up with the capsules.
+            // Non-destructive: the caller's scene/garment is restored afterwards.
+            var savedBones = new Transform[garmentMeshes.Count][];
+            var savedRoots = new Transform[garmentMeshes.Count];
+            for (int i = 0; i < garmentMeshes.Count; i++)
+            {
+                savedBones[i] = garmentMeshes[i].bones;
+                savedRoots[i] = garmentMeshes[i].rootBone;
+            }
+            CapsuleRadiusEstimator.Result est;
+            try
+            {
+                int remapped = RetargetGarmentToBody(garmentMeshes, fitter.targetAvatar, out int totalBones);
+                Debug.Log($"[VRClothDeclipper] 衣装採寸: re-bound {remapped}/{totalBones} garment bone(s) to '{fitter.targetAvatar.name}' skeleton (MA-merge core for alignment).");
+                est = VRClothBodyRadiusEstimator.EstimateFromMeshes(
+                    capsules, garmentMeshes, fitter.radiusPercentile);
+            }
+            finally
+            {
+                for (int i = 0; i < garmentMeshes.Count; i++)
+                {
+                    garmentMeshes[i].bones = savedBones[i];
+                    garmentMeshes[i].rootBone = savedRoots[i];
+                }
+            }
             string meshHash = ComputeBodyHash(garmentMeshes);
 
             int n = capsules.Count;
@@ -216,6 +244,98 @@ namespace VRClothDeclipper
                 hashes.Add(MeshFingerprint.Compute(b.sharedMesh.vertices, b.sharedMesh.triangles));
             }
             return MeshFingerprint.Combine(hashes);
+        }
+
+        const float MaxBoneSnap = 0.05f; // 5 cm — body bones are cm-apart; accessories sit farther
+
+        /// <summary>
+        /// Re-binds each garment renderer's bones onto the body skeleton — the core of
+        /// MA Merge Armature, applied only to align the garment meshes with the body
+        /// capsules for measurement (docs/MEASUREMENT_SPEC.md §4). Two passes per bone:
+        /// (1) exact same-name match (e.g. "Spine"→"Spine"); (2) when the garment uses
+        /// a different bone-naming convention than the body (e.g. the garment's "Foot_L"
+        /// vs the body's FBX name), the nearest body bone by world position — valid
+        /// because the garment is co-located on the body, so each garment bone sits on
+        /// its body counterpart. Bones with neither a name match nor a body bone within
+        /// <see cref="MaxBoneSnap"/> keep their original (garment-only accessories).
+        /// Returns the count re-bound; <paramref name="totalBones"/> is the total seen.
+        /// Mutates the passed renderers — callers back up/restore for non-destructive use.
+        /// </summary>
+        public static int RetargetGarmentToBody(
+            IReadOnlyList<SkinnedMeshRenderer> garmentMeshes, GameObject bodyAvatar, out int totalBones)
+        {
+            totalBones = 0;
+            int remapped = 0;
+            if (bodyAvatar == null)
+            {
+                return remapped;
+            }
+            Transform[] bodyBones = bodyAvatar.GetComponentsInChildren<Transform>(true);
+            var byName = new Dictionary<string, Transform>();
+            foreach (Transform t in bodyBones)
+            {
+                if (!byName.ContainsKey(t.name))
+                {
+                    byName[t.name] = t; // first wins; names may repeat on non-Humanoid rigs
+                }
+            }
+            foreach (var smr in garmentMeshes)
+            {
+                if (smr == null)
+                {
+                    continue;
+                }
+                Transform[] src = smr.bones;
+                var dst = new Transform[src.Length];
+                for (int i = 0; i < src.Length; i++)
+                {
+                    totalBones++;
+                    dst[i] = ResolveBodyBone(src[i], byName, bodyBones, ref remapped);
+                }
+                smr.bones = dst;
+                if (smr.rootBone != null)
+                {
+                    int ignore = 0;
+                    smr.rootBone = ResolveBodyBone(smr.rootBone, byName, bodyBones, ref ignore);
+                }
+            }
+            return remapped;
+        }
+
+        /// <summary>Resolves one garment bone to a body bone: exact name first, then
+        /// nearest body bone by world position (within <see cref="MaxBoneSnap"/>);
+        /// otherwise the garment bone is kept. Increments <paramref name="remapped"/>
+        /// when re-bound.</summary>
+        static Transform ResolveBodyBone(
+            Transform garmentBone, Dictionary<string, Transform> byName, Transform[] bodyBones, ref int remapped)
+        {
+            if (garmentBone == null)
+            {
+                return null;
+            }
+            if (byName.TryGetValue(garmentBone.name, out Transform named))
+            {
+                remapped++;
+                return named;
+            }
+            Transform best = null;
+            float bestSq = MaxBoneSnap * MaxBoneSnap;
+            Vector3 p = garmentBone.position;
+            foreach (Transform bb in bodyBones)
+            {
+                float d = (bb.position - p).sqrMagnitude;
+                if (d < bestSq)
+                {
+                    bestSq = d;
+                    best = bb;
+                }
+            }
+            if (best != null)
+            {
+                remapped++;
+                return best;
+            }
+            return garmentBone; // garment-only bone with no nearby body counterpart
         }
 
         static MeasurementDto BuildDto(
