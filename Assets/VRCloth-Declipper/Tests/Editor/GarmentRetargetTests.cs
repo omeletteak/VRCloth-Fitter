@@ -10,8 +10,10 @@ namespace VRClothDeclipper.Tests
     /// skin on the BODY bones and line up with the body capsules — co-locating the
     /// roots alone is not enough. Validates on real SkinnedMeshRenderers that
     /// <see cref="VRClothMeasurementDump.RetargetGarmentToBody"/> (1) re-points
-    /// same-named bones to the body, (2) leaves garment-only bones alone, and
-    /// (3) actually moves the baked geometry into the body's bone space.
+    /// same-named bones to the body, (2) leaves garment-only bones alone,
+    /// (3) corrects the bind pose so the garment skins on the body bones WITHOUT
+    /// distortion (its baked shape is preserved), and (4) absorbs a bone scale
+    /// difference so the garment keeps its real dimensions.
     /// </summary>
     public class GarmentRetargetTests
     {
@@ -30,7 +32,7 @@ namespace VRClothDeclipper.Tests
         T Track<T>(T o) where T : Object { trash.Add(o); return o; }
 
         [Test]
-        public void RetargetGarmentToBody_RebindsSameNamedBones_AndMovesBakeToBodySpace()
+        public void RetargetGarmentToBody_RebindsSameNamedBones_AndPreservesBakeShape()
         {
             // --- Body avatar: a "Hips" bone offset to x = +1.
             var body = Track(new GameObject("body"));
@@ -60,20 +62,29 @@ namespace VRClothDeclipper.Tests
             smr.sharedMesh = mesh;
 
             var meshes = new List<SkinnedMeshRenderer> { smr };
-            Vector3 before = Centroid(VRClothMeshCapture.BakeWorldVertices(smr));
+            Vector3[] before = VRClothMeshCapture.BakeWorldVertices(smr);
 
             // --- Re-bind onto the body skeleton.
             int remapped = VRClothMeasurementDump.RetargetGarmentToBody(meshes, body, out int total);
+            if (smr.sharedMesh != mesh) Track(smr.sharedMesh); // free the bind-pose clone
 
             Assert.AreEqual(1, total, "one garment bone seen");
             Assert.AreEqual(1, remapped, "the same-named Hips should re-bind to the body");
             Assert.AreSame(bodyHips, smr.bones[0], "garment bone now points at the BODY Hips");
 
-            // --- The baked geometry moved into the body's bone space (+1 on x).
-            Vector3 after = Centroid(VRClothMeshCapture.BakeWorldVertices(smr));
-            Assert.AreEqual(1f, after.x - before.x, 1e-3f, "bake should shift by the body-bone offset");
-            Assert.AreEqual(0f, after.y - before.y, 1e-3f);
-            Assert.AreEqual(0f, after.z - before.z, 1e-3f);
+            // --- The bones now skin on the BODY, but the bind-pose correction keeps the
+            // baked geometry exactly where it was — even though the body Hips is at x=+1 and
+            // the garment Hips was at the origin. Re-pointing bones WITHOUT the bind-pose
+            // correction would have jumped the bake +1 on x (the pre-fix distortion that
+            // made cloth clip the body and every body read minClear-negative).
+            Vector3[] after = VRClothMeshCapture.BakeWorldVertices(smr);
+            Assert.AreEqual(before.Length, after.Length, "vertex count unchanged");
+            for (int i = 0; i < before.Length; i++)
+            {
+                Assert.AreEqual(before[i].x, after[i].x, 1e-3f, $"vertex {i} x preserved");
+                Assert.AreEqual(before[i].y, after[i].y, 1e-3f, $"vertex {i} y preserved");
+                Assert.AreEqual(before[i].z, after[i].z, 1e-3f, $"vertex {i} z preserved");
+            }
         }
 
         [Test]
@@ -149,6 +160,58 @@ namespace VRClothDeclipper.Tests
             Assert.AreEqual(1, total);
             Assert.AreEqual(1, remapped, "a differently-named bone snaps to the co-located body bone");
             Assert.AreSame(bodyFoot, smr.bones[0], "re-bound by POSITION, not name");
+        }
+
+        [Test]
+        public void RetargetGarmentToBody_AbsorbsBoneScaleDifference_NoMeshDistortion()
+        {
+            // Body "Hips" is scaled 0.5x relative to the garment's bone. Re-pointing bones
+            // alone would shrink the garment to half size (the distortion that read as
+            // minClear-negative); the bind-pose correction must absorb the scale so the
+            // baked garment keeps its real dimensions.
+            var body = Track(new GameObject("body"));
+            var bodyHips = new GameObject("Hips").transform;
+            bodyHips.SetParent(body.transform);
+            bodyHips.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+
+            var garment = Track(new GameObject("garment"));
+            var garHips = new GameObject("Hips").transform;
+            garHips.SetParent(garment.transform);
+
+            var smrGo = new GameObject("m");
+            smrGo.transform.SetParent(garment.transform);
+            var smr = smrGo.AddComponent<SkinnedMeshRenderer>();
+            Mesh mesh = Track(MakeSheet(5, 0.1f));
+            var w = new BoneWeight[mesh.vertexCount];
+            for (int i = 0; i < w.Length; i++)
+            {
+                w[i] = new BoneWeight { boneIndex0 = 0, weight0 = 1f };
+            }
+            mesh.boneWeights = w;
+            mesh.bindposes = new[] { garHips.worldToLocalMatrix * smrGo.transform.localToWorldMatrix };
+            smr.bones = new[] { garHips };
+            smr.rootBone = garHips;
+            smr.sharedMesh = mesh;
+
+            float beforeSpan = BakeSpanX(smr);
+
+            VRClothMeasurementDump.RetargetGarmentToBody(
+                new List<SkinnedMeshRenderer> { smr }, body, out _);
+            if (smr.sharedMesh != mesh) Track(smr.sharedMesh);
+
+            Assert.AreSame(bodyHips, smr.bones[0], "re-bound to the scaled body bone");
+            float afterSpan = BakeSpanX(smr);
+            Assert.Greater(afterSpan, 0.01f, "garment did not collapse to a point");
+            Assert.AreEqual(beforeSpan, afterSpan, 1e-3f,
+                "bind-pose correction absorbs the 0.5x body-bone scale → garment keeps its size");
+        }
+
+        static float BakeSpanX(SkinnedMeshRenderer smr)
+        {
+            var pts = VRClothMeshCapture.BakeWorldVertices(smr);
+            float min = float.MaxValue, max = float.MinValue;
+            foreach (var p in pts) { if (p.x < min) min = p.x; if (p.x > max) max = p.x; }
+            return max - min;
         }
 
         static Vector3 Centroid(Vector3[] pts)

@@ -149,10 +149,12 @@ namespace VRClothDeclipper
             // Non-destructive: the caller's scene/garment is restored afterwards.
             var savedBones = new Transform[garmentMeshes.Count][];
             var savedRoots = new Transform[garmentMeshes.Count];
+            var savedMeshes = new Mesh[garmentMeshes.Count];
             for (int i = 0; i < garmentMeshes.Count; i++)
             {
                 savedBones[i] = garmentMeshes[i].bones;
                 savedRoots[i] = garmentMeshes[i].rootBone;
+                savedMeshes[i] = garmentMeshes[i].sharedMesh;
             }
             CapsuleRadiusEstimator.Result est;
             try
@@ -168,6 +170,14 @@ namespace VRClothDeclipper
                 {
                     garmentMeshes[i].bones = savedBones[i];
                     garmentMeshes[i].rootBone = savedRoots[i];
+                    // RetargetGarmentToBody may have swapped in a bind-pose-corrected mesh
+                    // clone; restore the original shared asset and free the clone (No Cache).
+                    Mesh cur = garmentMeshes[i].sharedMesh;
+                    if (cur != savedMeshes[i])
+                    {
+                        garmentMeshes[i].sharedMesh = savedMeshes[i];
+                        if (cur != null) UnityEngine.Object.DestroyImmediate(cur);
+                    }
                 }
             }
             string meshHash = ComputeBodyHash(garmentMeshes);
@@ -292,12 +302,44 @@ namespace VRClothDeclipper
                 }
                 Transform[] src = smr.bones;
                 var dst = new Transform[src.Length];
+
+                // Re-point each bone AND re-derive the garment mesh's bind pose onto the
+                // body bone, so the mesh skins WITHOUT distortion when the garment bone and
+                // the body bone differ in position/rotation/scale (their world transforms
+                // are absorbed). Same math as MA's MeshRetargeter.RetargetBones — MIT,
+                // (c) bd_ (https://github.com/bdunderscore/modular-avatar). Re-pointing
+                // bones alone (leaving the garment's own bind pose) is what made the cloth
+                // shrink/clip the body, so every body read minClear-negative.
+                Mesh mesh = smr.sharedMesh;
+                Matrix4x4[] srcBP = mesh != null ? mesh.bindposes : null;
+                Matrix4x4[] dstBP = (srcBP != null && srcBP.Length > 0) ? (Matrix4x4[])srcBP.Clone() : null;
+                bool bindposeChanged = false;
+
                 for (int i = 0; i < src.Length; i++)
                 {
                     totalBones++;
                     dst[i] = ResolveBodyBone(src[i], byName, bodyBones, avatarAnimator, ref remapped);
+
+                    if (dstBP != null && i < srcBP.Length
+                        && src[i] != null && dst[i] != null && dst[i] != src[i])
+                    {
+                        dstBP[i] = dst[i].worldToLocalMatrix * src[i].localToWorldMatrix * srcBP[i];
+                        bindposeChanged = true;
+                    }
                 }
                 smr.bones = dst;
+
+                if (bindposeChanged)
+                {
+                    // sharedMesh is a shared asset: clone it and swap only the bind poses,
+                    // so the source asset stays untouched (non-destructive) and the clone
+                    // lives only in memory until the caller restores/frees it (No Cache).
+                    Mesh clone = UnityEngine.Object.Instantiate(mesh);
+                    clone.name = "MEASURE_RETARGET__" + mesh.name;
+                    clone.bindposes = dstBP;
+                    smr.sharedMesh = clone;
+                }
+
                 if (smr.rootBone != null)
                 {
                     int ignore = 0;
