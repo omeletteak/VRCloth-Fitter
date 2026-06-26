@@ -65,6 +65,17 @@
 - [ ] **しきい値バージョニング** — 較正で変わる判定の互換性管理
 - [ ] **基準マネキンの選定** — 再配布自由なアバター数体を検証用の共通物差しに
 
+## プラットフォーム追跡: Unity 6 移行(上流待ち)
+
+VRChat が **Unity 6(6000.0.60f1)** への移行を進めている(2026-06-25 オープンベータ告知、`unity-6` ブランチ)。本プロジェクトの対応は**上流(VRCSDK / NDMF / Modular Avatar)の Unity 6 対応版リリース待ちで、現時点で着手すべき作業は無い**。
+
+- [ ] **Unity 6 対応** — **現状: 待機(2026-06-27 時点で作業不要)**。
+  - **今あげてはいけない**: VRChat は 2022.3.22f1 より新しい Unity からのアップロードをサーバー側で弾く(creator は据え置き必須)。本プロジェクトの価値はアップロード可能な衣装の生成(NDMF パスでの永続化)なので、先行移行は禁忌
+  - **律速は上流**: 依存はすべて `unity: "2022.3"`(VRCSDK Avatars 3.8.2 / NDMF 1.8.3 / Modular Avatar)。asmdef がこれらを参照するため、上流が Unity 6 版を出すまでコンパイル自体が通らない。順序は「VRChat が Unity 6 SDK 正式版 → NDMF/MA 追従 → 本プロジェクト検証」
+  - **移行時の見込み工数は小さい(先取り対応済み)**: Core/Runtime は純粋計算+設定 MonoBehaviour で版非依存。Editor が使う API(`SkinnedMeshRenderer.BakeMesh(mesh, false)`・`Undo.RecordObject`・`AssetDatabase.LoadAssetAtPath`)は 2022.3→Unity 6 で安定。Unity 6 で最頻の廃止 API `FindObjectsOfType` は既に新 API `FindObjectsByType<>(FindObjectsSortMode.None)` を使用済み([VRClothMeasureCli](Assets/VRCloth-Declipper/Editor/VRClothMeasureCli.cs) / [VRClothPreflightCli](Assets/VRCloth-Declipper/Editor/VRClothPreflightCli.cs))
+  - **移行時チェックリスト**: ① `ProjectSettings/ProjectVersion.txt` と各 `package.json` の `unity` を更新 ② Unity 6 対応版 VRCSDK/NDMF/MA を導入 ③ EditMode テスト一式を再実行 ④ 新規コンパイル警告を目視。ソース変更ゼロで済む可能性も高い
+  - **ウォッチポイント**: 次の VRChat dev update(**2026-07-16**)、および Unity 6 対応版 VRCSDK / NDMF・MA のリリース。出典: [VRChat Developer Update — 25 June 2026](https://ask.vrchat.com/t/developer-update-25-june-2026/48618)
+
 ## 凍結: 差分キャッシュの保存・共有
 
 旧ロードマップにあった「差分キャッシュの保存・再利用」「体型差分プリセットの共有」(旧 FUTURE_PLANS.md の構想を含む)は**凍結**します。
