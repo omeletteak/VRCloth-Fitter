@@ -1,7 +1,7 @@
 # 直近の E2E タスク（これ1本で次が分かる）
 
 > **この1本が「次に手を動かす GUI E2E」の唯一の入口。** 各タスクは〈何を / 期待する信号 / 手順リンク〉で自己完結。**手順の詳細**は [E2E_TEST_GUIDE.md](E2E_TEST_GUIDE.md)、**背景**は [ROADMAP.md](../ROADMAP.md) と各 docs。
-> やったら **結果(スクショ＋Preflight ログの数値)を控えてエージェントへ共有**。済みは末尾「最近完了」へ移す。E2E はユーザーが GUI で実施（エージェントは実行不可）。最終更新: 2026-06-24。
+> やったら **結果(スクショ＋Preflight ログの数値)を控えてエージェントへ共有**。済みは末尾「最近完了」へ移す。E2E はユーザーが GUI で実施（エージェントは実行不可）。最終更新: 2026-07-01。
 >
 > 凡例: 🔴 最優先 / 🟡 次 / ⚪ 余裕があれば
 
@@ -34,6 +34,12 @@
 ### ⚪ 6. 偽 GREEN ガードの負例確認
 - **何を**: わざと `Body Mesh` 欄に髪メッシュを指定 → **低カバレッジ警告（⚠ Body coverage low）が出るか**。出れば偽 GREEN 自己検知が機能。
 - **手順**: §3.1 ヘッドレス or インスペクタ `Run Preflight (Diagnostics)`。**背景**: `BodyModelConfidence`（[DIAGNOSTIC_HONESTY.md](DIAGNOSTIC_HONESTY.md) §1）。
+
+### ⚪ 7. 標準計測点（バスト/ウエスト/ヒップ）の較正
+- **何を**: `Dump Body Measurement (採寸)` を実素体で実行し、jsonl の `girth`（`bust_girth_m` / `waist_girth_m` / `hips_girth_m` ＋ `*_axisT`）を**人体感覚と突き合わせる**。配線は landed・しきい値は**未較正の暫定既定**（`VRClothGirthMeasure`: band 数 24 / prominence 0.03m / 軸上端 15% 延長）。
+- **期待する信号**: ① `girth.measured=true` で **3 点とも検出**（`extremaCount≥3`）。② 軸位置が **hips < waist < bust**（`*_axisT` が下→上）。③ **waist が bust/hips より細い**。④ 周径の絶対値が見た目と整合（極端な過大/過小がない）。**ズレの兆候**: バストが肩/腕を拾って過大（軸上端の延長過多）、極小が腰でなく股で出る（軸下端=Hips ボーン位置のズレ）、デフォルメ体で複数ピーク→単一誤検出。
+- **較正のつまみ**: ズレ方に応じて `VRClothGirthMeasure` の `TopExtendFraction`（バスト過大なら下げる）/ `MinProminenceM`（ノイズ拾いなら上げる）/ `BandCount`。**shapekey 0 固定**で測る（バストが胸 SK で動く、[MEASUREMENT_SPEC.md](MEASUREMENT_SPEC.md) §6）。
+- **手順**: §2 セットアップ → インスペクタ `Dump Body Measurement (採寸)` → プロジェクト直下 `vrcloth-body-measurements.jsonl` の最終行 `girth` を確認（複数素体なら `tools/sizing_table_export.py` で `points` 整形ビュー）。**背景**: [MEASUREMENT_SPEC.md](MEASUREMENT_SPEC.md) §2「計測点の標準化」/ §8（周径の取り方）。**残**: 四肢（上腕/前腕/太もも/脹脛）の定位置サンプルは未実装。
 
 ## 最近完了（参考・直近の流れが分かるよう数件だけ）
 
