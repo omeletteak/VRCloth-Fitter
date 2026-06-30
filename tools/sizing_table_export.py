@@ -5,9 +5,10 @@
 ＋計測条件。No Cache(周径スカラー＋一方向ハッシュのみ＝形状は復元不可、生 jsonl と
 同じ粒度)。プラットフォーム非依存(BOOTH/エージェント市場/自作台帳で同じ表が通用)。
 
-計測点名(bust/waist/hips/thigh/…)への標準化は docs/MEASUREMENT_SPEC.md §2「計測点の
-標準化」(軸方向スライス周径＋極値検出)を VRClothBodyRadiusEstimator に実装した後。
-現状はセグメントラベル(Hips→Spine 等)のまま出力する。
+計測点名(bust/waist/hips/…)への標準化は docs/MEASUREMENT_SPEC.md §2「計測点の標準化」
+(軸方向スライス周径＋極値検出 = `GirthProfile`)として landed。body 採寸が
+schema vrcloth-body-measurement/3 以降なら `girth.measured` のとき bust/waist/hips の
+実周径を `points` に出す。セグメントラベル(Hips→Spine 等)の周径は `girths` に併記。
 
 使い方:
     python tools/sizing_table_export.py <body-measurements.jsonl> [-o out.jsonl]
@@ -22,7 +23,7 @@ def to_sizing_table(row):
     def girth_mm(rad_m):
         return round(2 * math.pi * rad_m * 1000, 1)
 
-    return {
+    table = {
         "schema": "vrcloth-sizing-table/1",
         "avatar": row.get("avatar"),
         "meshHash": row.get("meshHash"),
@@ -33,7 +34,7 @@ def to_sizing_table(row):
             "headRef": row.get("headCount_headRef"),
         },
         "bodyCoverage": row.get("bodyCoverage"),
-        # セグメントラベルのまま。計測点名標準化は MEASUREMENT_SPEC §2(極値検出)後の TODO。
+        # セグメントラベル(Hips→Spine 等)の周径。
         "girths": [
             {
                 "point": c["label"],
@@ -44,6 +45,18 @@ def to_sizing_table(row):
             for c in row.get("capsules", [])
         ],
     }
+
+    # 標準計測点(MEASUREMENT_SPEC §2): body 採寸が girth を持ち、極値検出できたとき。
+    g = row.get("girth")
+    if isinstance(g, dict) and g.get("measured"):
+        points = {}
+        for name, key in (("bust", "bust_girth_m"), ("waist", "waist_girth_m"), ("hips", "hips_girth_m")):
+            v = g.get(key)
+            if v:  # 0 / None = その点は未検出
+                points[name] = round(v * 1000, 1)
+        if points:
+            table["points"] = points  # 計測点名 → 周径 mm(軸スライス実周長)
+    return table
 
 
 def main():

@@ -67,10 +67,29 @@ namespace VRClothDeclipper
             VRClothHeadCountMeasure.Result hc = VRClothHeadCountMeasure.Compute(fitter);
             string meshHash = ComputeBodyHash(outcome.bodyMeshes);
 
-            var dto = BuildDto(fitter, capsules, outcome, coverage, hc, meshHash);
+            // Standardized torso points (bust/waist/hips girth maxima/minimum, §2) from
+            // the same body parts the radii came from. Re-bakes their world vertices
+            // (cheap matrix work; nothing kept = No Cache).
+            var bodyVerts = new List<Vector3>();
+            if (outcome.bodyMeshes != null)
+            {
+                foreach (var bm in outcome.bodyMeshes)
+                {
+                    if (bm != null && bm.sharedMesh != null)
+                    {
+                        bodyVerts.AddRange(VRClothMeshCapture.BakeWorldVertices(bm));
+                    }
+                }
+            }
+            VRClothGirthMeasure.Result girth = VRClothGirthMeasure.Measure(fitter, bodyVerts);
+
+            var dto = BuildDto(fitter, capsules, outcome, coverage, hc, meshHash, girth);
             Debug.Log($"[VRClothDeclipper] 採寸 '{dto.avatar}': "
                 + $"head-count {dto.headCount_neckRef:F2} (Neck) / {dto.headCount_headRef:F2} (Head), "
-                + $"height {dto.height_m:F3} m, {dto.capsuleCount} capsules, coverage {coverage:P0}.");
+                + $"height {dto.height_m:F3} m, {dto.capsuleCount} capsules, coverage {coverage:P0}"
+                + (girth.ok
+                    ? $", girth bust {girth.bustGirth_m:F3} / waist {girth.waistGirth_m:F3} / hips {girth.hipsGirth_m:F3} m."
+                    : ", girth n/a."));
             return JsonUtility.ToJson(dto, false);
         }
 
@@ -406,7 +425,8 @@ namespace VRClothDeclipper
             VRClothBodyRadiusEstimator.Outcome outcome,
             float coverage,
             VRClothHeadCountMeasure.Result hc,
-            string meshHash)
+            string meshHash,
+            VRClothGirthMeasure.Result girth)
         {
             int n = capsules != null ? capsules.Count : 0;
             var capDtos = new CapsuleMeasureDto[n];
@@ -438,13 +458,23 @@ namespace VRClothDeclipper
                 },
                 capsuleCount = n,
                 capsules = capDtos,
+                girth = new GirthDto
+                {
+                    measured = girth.ok,
+                    bust_girth_m = girth.hasBust ? girth.bustGirth_m : 0f,
+                    waist_girth_m = girth.hasWaist ? girth.waistGirth_m : 0f,
+                    hips_girth_m = girth.hasHips ? girth.hipsGirth_m : 0f,
+                    bust_axisT = girth.hasBust ? girth.bustAxisT : 0f,
+                    waist_axisT = girth.hasWaist ? girth.waistAxisT : 0f,
+                    hips_axisT = girth.hasHips ? girth.hipsAxisT : 0f,
+                },
             };
         }
 
         [Serializable]
         class MeasurementDto
         {
-            public string schema = "vrcloth-body-measurement/2";
+            public string schema = "vrcloth-body-measurement/3";
             public string timestamp;
             public string avatar;
 
@@ -470,6 +500,32 @@ namespace VRClothDeclipper
             public MeasurementConditions conditions;
             public int capsuleCount;
             public CapsuleMeasureDto[] capsules;
+
+            /// <summary>
+            /// Standardized torso points (bust/waist/hips girths, schema /3) from the
+            /// axial girth profile (docs/MEASUREMENT_SPEC.md §2). The §2 anatomical
+            /// refinement of the per-capsule segment radii above. <c>measured=false</c>
+            /// when the torso axis or extrema could not be resolved.
+            /// </summary>
+            public GirthDto girth;
+        }
+
+        /// <summary>
+        /// Standardized torso measurement points (docs/MEASUREMENT_SPEC.md §2): bust and
+        /// hips as girth maxima, waist as the girth minimum between them, in meters.
+        /// <c>*_axisT</c> is the 0..1 position along the Hips→Chest axis (diagnostic).
+        /// Shape-key sensitive — measure at shape-key 0 (§6).
+        /// </summary>
+        [Serializable]
+        class GirthDto
+        {
+            public bool measured;
+            public float bust_girth_m;
+            public float waist_girth_m;
+            public float hips_girth_m;
+            public float bust_axisT;
+            public float waist_axisT;
+            public float hips_axisT;
         }
 
         /// <summary>

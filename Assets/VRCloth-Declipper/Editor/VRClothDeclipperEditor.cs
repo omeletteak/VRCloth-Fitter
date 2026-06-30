@@ -171,7 +171,7 @@ namespace VRClothDeclipper
                 VRClothHeadCountMeasure.Measure(fitter);
             }
             if (GUILayout.Button(new GUIContent("Dump Body Measurement (採寸)",
-                "Appends one 採寸表 row for the target avatar (per-capsule radii + head-count + coverage) to vrcloth-body-measurements.jsonl at the project root. Run it per avatar to build the table that powers family matching / closest-variant lookup (docs/ECOSYSTEM_VISION.md §5, FAMILY_MODEL.md §7). Scalars + names only — No Cache; a local dev artifact, not distributed.")))
+                "Appends one 採寸表 row for the target avatar (per-capsule radii + standardized bust/waist/hips girths + head-count + coverage) to vrcloth-body-measurements.jsonl at the project root. Run it per avatar to build the table that powers family matching / closest-variant lookup (docs/ECOSYSTEM_VISION.md §5, FAMILY_MODEL.md §7, MEASUREMENT_SPEC.md §2). Scalars + names only — No Cache; a local dev artifact, not distributed.")))
             {
                 VRClothMeasurementDump.Dump(fitter);
             }

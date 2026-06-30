@@ -115,5 +115,51 @@ namespace VRClothDeclipper.Tests
 
             Assert.AreEqual(0, ex.Count, "a tiny ripple is not bust/waist/hips");
         }
+
+        [Test]
+        public void ClassifyTorso_HipsWaistBust_LabelsByAxisPosition()
+        {
+            // Torso along +Y: hips bulge low (t≈0.18), waist pinch (t≈0.5), bust bulge
+            // high (t≈0.82) — the Hips→Chest convention (hips at t=0, chest at t=1).
+            System.Func<float, float> profile = t =>
+                0.16f
+                + 0.10f * Mathf.Exp(-Mathf.Pow((t - 0.18f) / 0.12f, 2f))
+                + 0.12f * Mathf.Exp(-Mathf.Pow((t - 0.82f) / 0.12f, 2f));
+            var verts = Tube(profile, 1f, 30, 120);
+            var bands = GirthProfile.Compute(Start, End(1f), verts, 24, 36, 8);
+            var ex = GirthProfile.FindExtrema(bands, 3, 0.05f);
+            var tp = GirthProfile.ClassifyTorso(ex);
+
+            Assert.IsTrue(tp.hasHips, "hips identified");
+            Assert.IsTrue(tp.hasWaist, "waist identified");
+            Assert.IsTrue(tp.hasBust, "bust identified");
+            Assert.Less(tp.hips.axisT, tp.waist.axisT, "hips below waist along the axis");
+            Assert.Less(tp.waist.axisT, tp.bust.axisT, "waist below bust along the axis");
+            Assert.Less(tp.waist.girthM, tp.hips.girthM, "waist tighter than hips");
+            Assert.Less(tp.waist.girthM, tp.bust.girthM, "waist tighter than bust");
+        }
+
+        [Test]
+        public void ClassifyTorso_SingleMaximum_PlacedByAxisHalf()
+        {
+            // One bulge high on the axis (t≈0.7) and nothing else: it must be the bust,
+            // not the hips, and there is no waist to report.
+            var verts = Tube(t => 0.2f + 0.1f * Mathf.Exp(-Mathf.Pow((t - 0.7f) / 0.12f, 2f)), 1f, 24, 120);
+            var bands = GirthProfile.Compute(Start, End(1f), verts, 20, 36, 8);
+            var ex = GirthProfile.FindExtrema(bands, 3, 0.05f);
+            var tp = GirthProfile.ClassifyTorso(ex);
+
+            Assert.IsTrue(tp.hasBust, "the upper-axis bulge is the bust");
+            Assert.IsFalse(tp.hasHips, "a lone upper bulge is not the hips");
+        }
+
+        [Test]
+        public void ClassifyTorso_NoExtrema_ReportsNothing()
+        {
+            var tp = GirthProfile.ClassifyTorso(new List<GirthProfile.Extremum>());
+            Assert.IsFalse(tp.hasBust);
+            Assert.IsFalse(tp.hasWaist);
+            Assert.IsFalse(tp.hasHips);
+        }
     }
 }

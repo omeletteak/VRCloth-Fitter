@@ -41,6 +41,21 @@ namespace VRClothDeclipper
         }
 
         /// <summary>
+        /// Anatomical torso points (docs/MEASUREMENT_SPEC.md §2) named from the girth
+        /// extrema of a Hips→Chest band. A flag is false when that point could not be
+        /// identified (e.g. a single girth maximum cannot be both bust and hips).
+        /// </summary>
+        public struct TorsoPoints
+        {
+            public bool hasBust;
+            public bool hasWaist;
+            public bool hasHips;
+            public Extremum bust;
+            public Extremum waist;
+            public Extremum hips;
+        }
+
+        /// <summary>
         /// Perimeter profile along start → end. Each vertex is projected onto the
         /// axis to choose a band and onto that band's perpendicular plane to form an
         /// outline; a band's girth is the angle-ordered length through the farthest
@@ -217,6 +232,65 @@ namespace VRClothDeclipper
                 });
             }
             return result;
+        }
+
+        /// <summary>
+        /// Labels girth extrema (from <see cref="FindExtrema"/> over a Hips→Chest band,
+        /// so axis order runs hips end at t=0 → chest end at t=1) as the anatomical
+        /// points of docs/MEASUREMENT_SPEC.md §2: hips = the lowest-t girth maximum,
+        /// bust = the highest-t maximum, waist = the tightest minimum lying between
+        /// them. With a single maximum it is assigned to hips or bust by which half of
+        /// the axis it sits in; with no minimum strictly between hips and bust the
+        /// tightest minimum overall becomes the waist. Pure — no editor dependency.
+        /// </summary>
+        public static TorsoPoints ClassifyTorso(IReadOnlyList<Extremum> extrema)
+        {
+            var tp = new TorsoPoints();
+            if (extrema == null || extrema.Count == 0) return tp;
+
+            // extrema are already in axis order (FindExtrema walks bands low→high t).
+            int firstMax = -1, lastMax = -1;
+            for (int i = 0; i < extrema.Count; i++)
+            {
+                if (!extrema[i].isMaximum) continue;
+                if (firstMax < 0) firstMax = i;
+                lastMax = i;
+            }
+            if (firstMax >= 0 && firstMax != lastMax)
+            {
+                tp.hips = extrema[firstMax]; tp.hasHips = true;
+                tp.bust = extrema[lastMax]; tp.hasBust = true;
+            }
+            else if (firstMax >= 0)
+            {
+                // A lone maximum can't be both bust and hips; place it by axis half.
+                if (extrema[firstMax].axisT < 0.5f) { tp.hips = extrema[firstMax]; tp.hasHips = true; }
+                else { tp.bust = extrema[firstMax]; tp.hasBust = true; }
+            }
+
+            // Waist = tightest minimum, preferring one between hips and bust.
+            bool bounded = tp.hasHips && tp.hasBust;
+            float lo = tp.hasHips ? tp.hips.axisT : float.NegativeInfinity;
+            float hi = tp.hasBust ? tp.bust.axisT : float.PositiveInfinity;
+            int waistIdx = FindTightestMin(extrema, bounded, lo, hi);
+            if (waistIdx < 0 && bounded)
+            {
+                waistIdx = FindTightestMin(extrema, false, 0f, 0f); // none strictly between — fall back to global
+            }
+            if (waistIdx >= 0) { tp.waist = extrema[waistIdx]; tp.hasWaist = true; }
+            return tp;
+        }
+
+        static int FindTightestMin(IReadOnlyList<Extremum> extrema, bool bounded, float lo, float hi)
+        {
+            int best = -1;
+            for (int i = 0; i < extrema.Count; i++)
+            {
+                if (extrema[i].isMaximum) continue;
+                if (bounded && (extrema[i].axisT <= lo || extrema[i].axisT >= hi)) continue;
+                if (best < 0 || extrema[i].girthM < extrema[best].girthM) best = i;
+            }
+            return best;
         }
     }
 }
